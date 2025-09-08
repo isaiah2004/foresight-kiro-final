@@ -1,7 +1,7 @@
 'use client';
 
 import { UserButton } from '@clerk/nextjs';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useUserProfileClient } from '@/hooks/use-user-profile-client';
 
 interface EnhancedUserButtonProps {
   afterSignOutUrl?: string;
@@ -12,7 +12,7 @@ export function EnhancedUserButton({
   afterSignOutUrl = "/", 
   showName = false 
 }: EnhancedUserButtonProps) {
-  const { profile } = useUserProfile();
+  const { profile } = useUserProfileClient();
 
   return (
     <div className="flex items-center space-x-3">

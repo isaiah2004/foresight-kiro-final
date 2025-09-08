@@ -182,6 +182,7 @@ export const tabNavigationConfig = {
     { title: "Fin Bot", url: "/dashboard/overview/fin-bot" },
   ],
   investments: [
+    { title: "Overview", url: "/dashboard/investments/overview" },
     { title: "Stocks", url: "/dashboard/investments/stocks" },
     { title: "Bonds", url: "/dashboard/investments/bonds" },
     { title: "Mutual Funds", url: "/dashboard/investments/mutual-funds" },
@@ -190,18 +191,30 @@ export const tabNavigationConfig = {
     { title: "Other", url: "/dashboard/investments/other" },
   ],
   budgets: [
+    { title: "Overview", url: "/dashboard/budgets/overview" },
     { title: "Income Splitting", url: "/dashboard/budgets/income-splitting" },
     { title: "Buckets", url: "/dashboard/budgets/buckets" },
     { title: "Manage", url: "/dashboard/budgets/manage" },
   ],
   income: [
+    { title: "Overview", url: "/dashboard/income/overview" },
     { title: "Salary", url: "/dashboard/income/salary" },
     { title: "Rental Properties", url: "/dashboard/income/rental-properties" },
     { title: "Others", url: "/dashboard/income/others" },
   ],
   funds: [
+    { title: "Overview", url: "/dashboard/funds/overview" },
     { title: "Pots", url: "/dashboard/funds/pots" },
     { title: "Saving Funds", url: "/dashboard/funds/saving-funds" },
     { title: "Other", url: "/dashboard/funds/other" },
+  ],
+  expenses: [
+    { title: "Overview", url: "/dashboard/expenses" },
+  ],
+  loans: [
+    { title: "Overview", url: "/dashboard/loans" },
+  ],
+  insights: [
+    { title: "Overview", url: "/dashboard/insights" },
   ],
 };

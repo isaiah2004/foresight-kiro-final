@@ -3,12 +3,17 @@
 import { DashboardLayout } from "@/components/shared/layouts/dashboard-layout"
 import { TabNavigation } from "@/components/shared/navigation/tab-navigation"
 import { tabNavigationConfig } from "@/lib/navigation-config"
+import { CryptoInvestmentForm } from "@/components/shared/investments/crypto-investment-form"
+import { useInvestments } from "@/hooks/use-investments"
+import { useCurrency } from "@/hooks/use-currency"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Bitcoin, TrendingUp, TrendingDown, DollarSign, Zap, Plus, Shield, AlertTriangle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Bitcoin, TrendingUp, TrendingDown, DollarSign, Zap, Plus, Shield, AlertTriangle, AlertCircle } from "lucide-react"
+import { useMemo } from "react"
 
 export default function CryptoPage() {
   const breadcrumbs = [
@@ -17,75 +22,61 @@ export default function CryptoPage() {
     { title: "Crypto" }
   ]
 
-  const cryptoData = {
-    totalValue: 12450,
-    totalInvested: 10800,
-    totalReturn: 15.3,
-    todayChange: -2.4,
-    portfolioCount: 8
+  const { 
+    investments, 
+    isLoading, 
+    error, 
+    addInvestment, 
+    updatePrices, 
+    lastPriceUpdate 
+  } = useInvestments()
+  
+  const { primaryCurrency } = useCurrency()
+
+  // Filter only crypto investments
+  const cryptoInvestments = useMemo(() => 
+    investments.filter(inv => inv.type === 'crypto'), 
+    [investments]
+  )
+
+  const handleAddInvestment = async (data: any) => {
+    await addInvestment({
+      symbol: data.symbol,
+      type: data.type || 'crypto',
+      quantity: data.quantity,
+      purchasePrice: data.purchasePrice,
+      purchaseCurrency: data.purchaseCurrency,
+      purchaseDate: data.purchaseDate,
+      metadata: {
+        cryptoName: data.cryptoName,
+        exchange: data.exchange,
+        walletType: data.walletType,
+        walletAddress: data.walletAddress,
+        stakingReward: data.stakingReward,
+        notes: data.notes
+      }
+    })
   }
 
-  const cryptoHoldings = [
-    {
-      symbol: "BTC",
-      name: "Bitcoin",
-      amount: 0.125,
-      value: 5420,
-      price: 43360,
-      change24h: -1.8,
-      allocation: 43.5
-    },
-    {
-      symbol: "ETH", 
-      name: "Ethereum",
-      amount: 2.45,
-      value: 4200,
-      price: 1714.29,
-      change24h: -3.2,
-      allocation: 33.7
-    },
-    {
-      symbol: "ADA",
-      name: "Cardano",
-      amount: 2500,
-      value: 1250,
-      price: 0.50,
-      change24h: 2.1,
-      allocation: 10.0
-    },
-    {
-      symbol: "DOT",
-      name: "Polkadot",
-      amount: 180,
-      value: 980,
-      price: 5.44,
-      change24h: -0.8,
-      allocation: 7.9
-    },
-    {
-      symbol: "LINK",
-      name: "Chainlink",
-      amount: 42,
-      value: 600,
-      price: 14.29,
-      change24h: 1.5,
-      allocation: 4.8
-    }
-  ]
+  // Calculate totals from actual crypto investments
+  const totalValue = cryptoInvestments.reduce((sum, crypto) => {
+    const currentPrice = crypto.lastSyncedPrice || crypto.purchasePrice
+    return sum + (crypto.quantity * currentPrice)
+  }, 0)
+  
+  const totalInvested = cryptoInvestments.reduce((sum, crypto) => {
+    return sum + (crypto.quantity * crypto.purchasePrice)
+  }, 0)
+  
+  const totalReturn = totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested) * 100 : 0
 
-  const marketMetrics = [
-    { label: "Market Cap", value: "$1.7T", trend: "down" },
-    { label: "24h Volume", value: "$45.2B", trend: "up" },
-    { label: "Bitcoin Dominance", value: "42.8%", trend: "stable" },
-    { label: "Fear & Greed Index", value: "65", trend: "up" }
-  ]
-
-  const newsAndAlerts = [
-    { type: "Price Alert", message: "BTC reached your target of $43,000", time: "2 hours ago" },
-    { type: "News", message: "Ethereum upgrade scheduled for next month", time: "4 hours ago" },
-    { type: "Warning", message: "High volatility detected in your portfolio", time: "6 hours ago" },
-    { type: "Achievement", message: "Portfolio gained 5% this week", time: "1 day ago" }
-  ]
+  const cryptoData = {
+    totalValue,
+    totalInvested,
+    totalReturn,
+    todayChange: 0, // This would need to be calculated from price changes
+    portfolioCount: cryptoInvestments.length
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -110,6 +101,13 @@ export default function CryptoPage() {
   return (
     <DashboardLayout breadcrumbs={breadcrumbs} title="Cryptocurrency Investments">
       <TabNavigation tabs={tabNavigationConfig.investments} />
+      
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       <motion.div 
         className="flex flex-1 flex-col gap-6"
@@ -199,54 +197,50 @@ export default function CryptoPage() {
               <CardDescription>Distribution by market cap</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {cryptoHoldings.map((crypto, index) => (
-                <motion.div 
-                  key={crypto.symbol}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="space-y-2"
-                >
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-orange-500" />
-                      {crypto.symbol} - {crypto.name}
-                    </span>
-                    <span className="font-medium">
-                      {crypto.allocation}%
-                    </span>
-                  </div>
-                  <Progress value={crypto.allocation} className="h-2" />
-                </motion.div>
-              ))}
+              {cryptoInvestments.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground">No crypto investments to display allocation</p>
+                </div>
+              ) : (
+                cryptoInvestments.map((crypto, index) => {
+                  const currentValue = crypto.quantity * (crypto.lastSyncedPrice || crypto.purchasePrice)
+                  const allocation = totalValue > 0 ? (currentValue / totalValue) * 100 : 0
+                  
+                  return (
+                    <motion.div 
+                      key={crypto.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      className="space-y-2"
+                    >
+                      <div className="flex justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-orange-500" />
+                          {crypto.symbol} - {crypto.metadata?.cryptoName || crypto.symbol}
+                        </span>
+                        <span className="font-medium">
+                          {allocation.toFixed(1)}%
+                        </span>
+                      </div>
+                      <Progress value={allocation} className="h-2" />
+                    </motion.div>
+                  )
+                })
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Market Metrics</CardTitle>
-              <CardDescription>Global cryptocurrency market data</CardDescription>
+              <CardTitle>Market Information</CardTitle>
+              <CardDescription>General cryptocurrency market data</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                {marketMetrics.map((metric, index) => (
-                  <motion.div
-                    key={metric.label}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="p-3 border rounded-lg text-center"
-                  >
-                    <div className="text-xl font-bold text-primary">{metric.value}</div>
-                    <div className="text-sm text-muted-foreground">{metric.label}</div>
-                    <Badge 
-                      variant={metric.trend === 'up' ? 'default' : metric.trend === 'down' ? 'destructive' : 'secondary'}
-                      className="mt-1"
-                    >
-                      {metric.trend === 'up' ? '↗' : metric.trend === 'down' ? '↘' : '→'}
-                    </Badge>
-                  </motion.div>
-                ))}
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Market data integration coming soon
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -259,102 +253,118 @@ export default function CryptoPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Holdings Detail</CardTitle>
-                  <CardDescription>Your cryptocurrency positions</CardDescription>
+                  <CardDescription>
+                    {cryptoInvestments.length > 0 
+                      ? `Your cryptocurrency positions (${cryptoInvestments.length} holdings)`
+                      : "No cryptocurrency investments found"
+                    }
+                  </CardDescription>
                 </div>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Buy Crypto
+                <CryptoInvestmentForm 
+                  onSubmit={handleAddInvestment} 
+                  isLoading={isLoading}
+                  triggerText="Add Crypto"
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-muted-foreground">Loading crypto investments...</div>
+                </div>
+              ) : cryptoInvestments.length === 0 ? (
+                <div className="text-center py-8">
+                  <Bitcoin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Crypto Investments</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Start building your cryptocurrency portfolio by adding your first investment.
+                  </p>
+                  <CryptoInvestmentForm 
+                    onSubmit={handleAddInvestment} 
+                    isLoading={isLoading}
+                    triggerText="Add Your First Crypto"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cryptoInvestments.map((crypto, index) => {
+                    const currentValue = crypto.quantity * (crypto.lastSyncedPrice || crypto.purchasePrice)
+                    const investedValue = crypto.quantity * crypto.purchasePrice
+                    const returnValue = currentValue - investedValue
+                    const returnPercentage = investedValue > 0 ? (returnValue / investedValue) * 100 : 0
+
+                    return (
+                      <motion.div
+                        key={crypto.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                        className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="grid gap-4 md:grid-cols-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                              {crypto.symbol.slice(0, 2)}
+                            </div>
+                            <div>
+                              <div className="font-semibold">{crypto.symbol}</div>
+                              <div className="text-sm text-muted-foreground">{crypto.metadata?.cryptoName || 'Cryptocurrency'}</div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm text-muted-foreground">Holdings</div>
+                            <div className="font-semibold">{crypto.quantity.toLocaleString()}</div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm text-muted-foreground">Current Price</div>
+                            <div className="font-semibold">${(crypto.lastSyncedPrice || crypto.purchasePrice).toLocaleString()}</div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm text-muted-foreground">Value</div>
+                            <div className="font-semibold">${currentValue.toLocaleString()}</div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm text-muted-foreground">Return</div>
+                            <Badge variant={returnPercentage >= 0 ? 'default' : 'destructive'}>
+                              {returnPercentage >= 0 ? '+' : ''}{returnPercentage.toFixed(1)}%
+                            </Badge>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Update Prices Button */}
+        {cryptoInvestments.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Price Updates</CardTitle>
+                <CardDescription>Keep your crypto valuations current</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={updatePrices} disabled={isLoading}>
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Update Crypto Prices
                 </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {cryptoHoldings.map((crypto, index) => (
-                  <motion.div
-                    key={crypto.symbol}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="grid gap-4 md:grid-cols-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                          {crypto.symbol.slice(0, 2)}
-                        </div>
-                        <div>
-                          <div className="font-semibold">{crypto.symbol}</div>
-                          <div className="text-sm text-muted-foreground">{crypto.name}</div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-muted-foreground">Holdings</div>
-                        <div className="font-semibold">{crypto.amount.toLocaleString()}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-muted-foreground">Price</div>
-                        <div className="font-semibold">${crypto.price.toLocaleString()}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-muted-foreground">Value</div>
-                        <div className="font-semibold">${crypto.value.toLocaleString()}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-muted-foreground">24h Change</div>
-                        <Badge variant={crypto.change24h >= 0 ? 'default' : 'destructive'}>
-                          {crypto.change24h >= 0 ? '+' : ''}{crypto.change24h}%
-                        </Badge>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* News & Alerts */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader>
-              <CardTitle>News & Alerts</CardTitle>
-              <CardDescription>Recent updates and notifications</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {newsAndAlerts.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="flex items-start gap-3 p-3 border rounded-lg"
-                  >
-                    <div className="flex-shrink-0 mt-1">
-                      {item.type === 'Price Alert' && <Zap className="h-4 w-4 text-yellow-500" />}
-                      {item.type === 'News' && <TrendingUp className="h-4 w-4 text-blue-500" />}
-                      {item.type === 'Warning' && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                      {item.type === 'Achievement' && <Shield className="h-4 w-4 text-green-500" />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {item.type}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">{item.time}</span>
-                      </div>
-                      <div className="text-sm">{item.message}</div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                {lastPriceUpdate && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Last updated: {new Date(lastPriceUpdate).toLocaleString()}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </motion.div>
     </DashboardLayout>
   )

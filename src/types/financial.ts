@@ -29,6 +29,7 @@ export interface Investment {
   lastSyncTimestamp: Date;
   currentValue?: number; // Calculated field in user's primary currency
   currentValueCurrency?: string;
+  metadata?: Record<string, any>; // Additional investment-specific data
 }
 
 export interface BudgetAllocation {

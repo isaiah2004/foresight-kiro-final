@@ -65,42 +65,43 @@
   - upate the docs to keep to the new `docs.md`
 
 - [x] 7.1 Implement Firebase caching system
-
   - Create separate cache collections for stocks and crypto in Firestore
   - Build cache update mechanism triggered by user price update requests
   - Implement timestamp-based cache freshness checking
   - _Requirements: 4.4, 4.5, 4.7, 4.8_
 
 - [x] 7.2 Build investment management interface
-
-
-
-
-
   - Create investment portfolio dashboard with stocks, bonds, mutual funds, real estate, crypto, and other categories
   - Implement investment addition form with currency and purchase details
   - Build portfolio value calculation in primary currency
   - _Requirements: 4.1, 4.2, 4.6_
 
-- [ ] 7.3 Integrate external financial APIs
+- [x] 7.3 Integrate external financial APIs
   - Set up FinnHub.io integration for real-time stock data
   - Implement Alpha Vantage integration for historical data
   - Build graceful fallback to cached data when APIs are unavailable
   - _Requirements: 4.3, 4.7_
 
-- [ ] 8. Income and Expense Management
-- [ ] 8.1 Create income source management
+- [x] 7.4. Finish Investment form
+  - In the add investment page. allow the use to search for stock via a cached api.
+  - The cached api has a valididty of 24hour that can be overidden when the user presses the refresh prices button. Use Finnhub for stocks and crypto.
+  - Make sure the form is different for everytype of investment otherwise what is the point.
+  - Allow user to edit there investment via an edit buttom that opens an overlay form that can be used to edit THAT TYPE of investment and save the changes.
+  - _Requirements: 7.1, 7.2,7.3_
+
+- [x] 8.1 Create income source management
   - Build income management interface with Salary, Rental Properties, and Others categories
   - Implement dual navigation (sidebar + tabs) pattern
   - Create income frequency normalization to monthly equivalents
   - _Requirements: 6.1, 6.2, 6.3, 6.5_
 
-- [ ] 8.2 Implement expense tracking system
+- [x] 8.2 Implement expense tracking system
   - Create expense management with Rent, Groceries, Utilities, Entertainment, and Other categories
   - Build expense entry form with currency, category, and description fields
   - Implement spending analysis against budget allocations with visual indicators
-  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_- [
-    ] 9. Loan Management with Regional Compliance
+  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_-
+
+- [ ] 9. Loan Management with Regional Compliance
 - [ ] 9.1 Implement core amortization engine
   - Build reducing-balance method calculator with Payment = P × i × (1+i)^n / ((1+i)^n - 1) formula
   - Create amortization schedule generator with all required columns (Payment Number, Opening Balance, etc.)

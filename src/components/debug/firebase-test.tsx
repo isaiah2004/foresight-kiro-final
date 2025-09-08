@@ -1,75 +1,42 @@
 'use client';
 
 import { useUser } from '@clerk/nextjs';
-import { useFirebaseAuth } from '@/lib/firebase-client';
-import { useEffect, useState, useCallback } from 'react';
+import { useUserProfileClient } from '@/hooks/use-user-profile-client';
 
-export function FirebaseConnectionTest() {
-  const { isSignedIn } = useUser();
-  const { signInToFirebase, firebaseAuth } = useFirebaseAuth();
-  const [firebaseUser, setFirebaseUser] = useState<any>(null);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  const connectToFirebase = useCallback(async () => {
-    if (!isSignedIn) return;
-    
-    setIsConnecting(true);
-    setConnectionError(null);
-    
-    try {
-      const user = await signInToFirebase();
-      setFirebaseUser(user);
-      console.log('✅ Successfully connected to Firebase:', user?.uid);
-    } catch (error: any) {
-      console.error('❌ Firebase connection failed:', error);
-      setConnectionError(error.message || 'Failed to connect to Firebase');
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [isSignedIn, signInToFirebase]);
-
-  useEffect(() => {
-    if (isSignedIn && !firebaseUser && !isConnecting) {
-      connectToFirebase();
-    }
-  }, [isSignedIn, firebaseUser, isConnecting, connectToFirebase]);
+export function UserConnectionTest() {
+  const { isSignedIn, user } = useUser();
+  const { profile, loading, error } = useUserProfileClient();
 
   if (!isSignedIn) {
-    return <div className="p-4 bg-yellow-100 rounded">Please sign in to test Firebase connection</div>;
+    return <div className="p-4 bg-yellow-100 rounded">Please sign in to test user profile</div>;
   }
 
   return (
     <div className="p-4 border rounded-lg space-y-2">
-      <h3 className="font-semibold">Firebase Connection Status</h3>
+      <h3 className="font-semibold">User Profile Status</h3>
       
-      {isConnecting && (
-        <div className="text-blue-600">🔄 Connecting to Firebase...</div>
+      {loading && (
+        <div className="text-blue-600">🔄 Loading user profile...</div>
       )}
       
-      {firebaseUser && (
+      {profile && (
         <div className="text-green-600">
-          ✅ Connected to Firebase
+          ✅ User profile loaded successfully
           <br />
-          <small>Firebase UID: {firebaseUser.uid}</small>
+          <small>User ID: {user?.id}</small>
+          <br />
+          <small>Primary Currency: {profile.primaryCurrency}</small>
+          <br />
+          <small>Theme: {profile.preferences.theme}</small>
         </div>
       )}
       
-      {connectionError && (
+      {error && (
         <div className="text-red-600">
-          ❌ Firebase connection failed
+          ❌ User profile error
           <br />
-          <small>{connectionError}</small>
+          <small>{error}</small>
         </div>
-      )}
-      
-      {!isConnecting && !firebaseUser && !connectionError && (
-        <button 
-          onClick={connectToFirebase}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Test Firebase Connection
-        </button>
       )}
     </div>
   );

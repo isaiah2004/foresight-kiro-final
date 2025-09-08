@@ -1,46 +1,50 @@
-"use client"
+'use client';
 
-import { useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  PieChart, 
-  BarChart3, 
+import { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  BarChart3,
   RefreshCw,
   AlertCircle,
   Target,
-  Plus,
   ArrowRight,
-  Activity
-} from 'lucide-react'
+} from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { InvestmentForm } from './investment-form'
-import { 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InvestmentForm } from './investment-form';
+import { ApiStatusCard } from './api-status-card';
+import {
   calculatePortfolioSummary,
   calculateAssetAllocation,
   getTopPerformers,
   calculateDiversificationScore,
   formatInvestmentValue,
   formatPercentageChange,
-  getInvestmentCategories
-} from '@/lib/financial/investments'
-import { Investment } from '@/types/financial'
+  getInvestmentCategories,
+} from '@/lib/financial/investments';
+import { Investment } from '@/types/financial';
 
 interface InvestmentOverviewProps {
-  investments: Investment[]
-  primaryCurrency: string
-  isLoading?: boolean
-  onAddInvestment: (data: any) => Promise<void>
-  onUpdatePrices: () => Promise<void>
-  lastPriceUpdate?: Date
+  investments: Investment[];
+  primaryCurrency: string;
+  isLoading?: boolean;
+  onAddInvestment: (data: any) => Promise<void>;
+  onUpdatePrices: () => Promise<void>;
+  lastPriceUpdate?: Date;
 }
 
 export function InvestmentOverview({
@@ -49,42 +53,43 @@ export function InvestmentOverview({
   isLoading = false,
   onAddInvestment,
   onUpdatePrices,
-  lastPriceUpdate
+  lastPriceUpdate,
 }: InvestmentOverviewProps) {
-  const [isUpdatingPrices, setIsUpdatingPrices] = useState(false)
-  const router = useRouter()
+  const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
+  const router = useRouter();
 
   // Calculate portfolio metrics
-  const portfolioSummary = useMemo(() => 
-    calculatePortfolioSummary(investments, primaryCurrency), 
+  const portfolioSummary = useMemo(
+    () => calculatePortfolioSummary(investments, primaryCurrency),
     [investments, primaryCurrency]
-  )
+  );
 
-  const assetAllocation = useMemo(() => 
-    calculateAssetAllocation(investments, primaryCurrency), 
+  const assetAllocation = useMemo(
+    () => calculateAssetAllocation(investments, primaryCurrency),
     [investments, primaryCurrency]
-  )
+  );
 
-  const topPerformers = useMemo(() => 
-    getTopPerformers(investments, 4), 
+  const topPerformers = useMemo(
+    () => getTopPerformers(investments, 4),
     [investments]
-  )
+  );
 
-  const diversificationScore = useMemo(() => 
-    calculateDiversificationScore(investments), 
+  const diversificationScore = useMemo(
+    () => calculateDiversificationScore(investments),
     [investments]
-  )
+  );
 
-  const categories = getInvestmentCategories()
+  const categories = getInvestmentCategories();
+
 
   const handleUpdatePrices = async () => {
-    setIsUpdatingPrices(true)
+    setIsUpdatingPrices(true);
     try {
-      await onUpdatePrices()
+      await onUpdatePrices();
     } finally {
-      setIsUpdatingPrices(false)
+      setIsUpdatingPrices(false);
     }
-  }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -92,61 +97,79 @@ export function InvestmentOverview({
       opacity: 1,
       transition: {
         duration: 0.6,
-        staggerChildren: 0.1
-      }
-    }
-  }
+        staggerChildren: 0.1,
+      },
+    },
+  };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5 }
-    }
-  }
+      transition: { duration: 0.5 },
+    },
+  };
 
-  const totalReturnColor = portfolioSummary.totalReturn >= 0 ? 'text-green-600' : 'text-red-600'
-  const todayChangeColor = portfolioSummary.todayChange >= 0 ? 'text-green-600' : 'text-red-600'
+  const totalReturnColor =
+    portfolioSummary.totalReturn >= 0 ? 'text-green-600' : 'text-red-600';
+  const todayChangeColor =
+    portfolioSummary.todayChange >= 0 ? 'text-green-600' : 'text-red-600';
 
   // Calculate category statistics
-  const categoryStats = categories.map(category => {
-    const categoryInvestments = investments.filter(inv => inv.type === category.type)
-    const totalValue = categoryInvestments.reduce((sum, inv) => 
-      sum + (inv.currentValue || inv.quantity * inv.lastSyncedPrice), 0
-    )
-    
-    return {
-      ...category,
-      count: categoryInvestments.length,
-      value: totalValue,
-      href: `/dashboard/investments/${category.type === 'mutual-fund' ? 'mutual-funds' : category.type}`
-    }
-  }).sort((a, b) => b.value - a.value)
+  const categoryStats = categories
+    .map((category) => {
+      const categoryInvestments = investments.filter(
+        (inv) => inv.type === category.type
+      );
+      const totalValue = categoryInvestments.reduce(
+        (sum, inv) =>
+          sum + (inv.currentValue || inv.quantity * inv.lastSyncedPrice),
+        0
+      );
+
+      return {
+        ...category,
+        count: categoryInvestments.length,
+        value: totalValue,
+        href: `/dashboard/investments/${category.type === 'mutual-fund' ? 'mutual-funds' : category.type === 'stock' ? 'stocks' : category.type === 'bond' ? 'bonds' : category.type}`,
+      };
+    })
+    .sort((a, b) => b.value - a.value);
 
   return (
-    <motion.div 
+    <motion.div
       className="flex flex-1 flex-col gap-6"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       {/* Portfolio Overview Cards */}
-      <motion.div 
+      <motion.div
         className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
         variants={itemVariants}
       >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Portfolio</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Portfolio
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatInvestmentValue(portfolioSummary.totalValue, primaryCurrency)}
+              {formatInvestmentValue(
+                portfolioSummary.totalValue,
+                primaryCurrency
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatInvestmentValue(portfolioSummary.totalReturn, primaryCurrency, false)} total gain
+              {formatInvestmentValue(
+                portfolioSummary.totalReturn,
+                primaryCurrency,
+                false
+              )}{' '}
+              total gain
             </p>
           </CardContent>
         </Card>
@@ -162,17 +185,20 @@ export function InvestmentOverview({
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${totalReturnColor}`}>
-              {formatPercentageChange(portfolioSummary.totalReturnPercentage).formatted}
+              {
+                formatPercentageChange(portfolioSummary.totalReturnPercentage)
+                  .formatted
+              }
             </div>
-            <p className="text-xs text-muted-foreground">
-              Since inception
-            </p>
+            <p className="text-xs text-muted-foreground">Since inception</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today&apos;s Change</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Today&apos;s Change
+            </CardTitle>
             {portfolioSummary.todayChange >= 0 ? (
               <TrendingUp className="h-4 w-4 text-green-600" />
             ) : (
@@ -181,21 +207,33 @@ export function InvestmentOverview({
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${todayChangeColor}`}>
-              {formatInvestmentValue(portfolioSummary.todayChange, primaryCurrency, false)}
+              {formatInvestmentValue(
+                portfolioSummary.todayChange,
+                primaryCurrency,
+                false
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatPercentageChange(portfolioSummary.todayChangePercentage).formatted} today
+              {
+                formatPercentageChange(portfolioSummary.todayChangePercentage)
+                  .formatted
+              }{' '}
+              today
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Diversification</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Diversification
+            </CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{diversificationScore.score}/100</div>
+            <div className="text-2xl font-bold">
+              {diversificationScore.score}/100
+            </div>
             <p className="text-xs text-muted-foreground capitalize">
               {diversificationScore.level} diversification
             </p>
@@ -204,33 +242,45 @@ export function InvestmentOverview({
       </motion.div>
 
       {/* Price Update and Add Investment */}
-      <motion.div variants={itemVariants}>
+      <motion.div className="grid gap-4 md:grid-cols-2" variants={itemVariants}>
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg">Portfolio Management</CardTitle>
                 <CardDescription>
-                  {lastPriceUpdate 
+                  {lastPriceUpdate
                     ? `Last updated: ${lastPriceUpdate.toLocaleString()}`
-                    : 'Prices have not been updated yet'
-                  }
+                    : 'Prices have not been updated yet'}
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button 
+                <Button
                   onClick={handleUpdatePrices}
                   disabled={isUpdatingPrices}
                   variant="outline"
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingPrices ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 mr-2 ${isUpdatingPrices ? 'animate-spin' : ''}`}
+                  />
                   {isUpdatingPrices ? 'Updating...' : 'Update Prices'}
                 </Button>
-                <InvestmentForm onSubmit={onAddInvestment} isLoading={isLoading} />
+                <InvestmentForm
+                  onSubmit={onAddInvestment}
+                  isLoading={isLoading}
+                />
               </div>
             </div>
           </CardHeader>
         </Card>
+
+        <ApiStatusCard
+          symbols={{
+            stocks: investments.filter(inv => inv.type === 'stock').map(inv => inv.symbol),
+            crypto: investments.filter(inv => inv.type === 'crypto').map(inv => inv.symbol)
+          }}
+          onPricesUpdated={onUpdatePrices}
+        />
       </motion.div>
 
       {/* Diversification Recommendations */}
@@ -239,7 +289,8 @@ export function InvestmentOverview({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Diversification Tips:</strong> {diversificationScore.recommendations.join('. ')}
+              <strong>Diversification Tips:</strong>{' '}
+              {diversificationScore.recommendations.join('. ')}
             </AlertDescription>
           </Alert>
         </motion.div>
@@ -250,7 +301,9 @@ export function InvestmentOverview({
         <Card>
           <CardHeader>
             <CardTitle>Investment Categories</CardTitle>
-            <CardDescription>Overview of your investment portfolio by asset class</CardDescription>
+            <CardDescription>
+              Overview of your investment portfolio by asset class
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -270,20 +323,28 @@ export function InvestmentOverview({
                         <BarChart3 className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-sm">{category.label}</h3>
-                        <p className="text-xs text-muted-foreground">{category.count} holdings</p>
+                        <h3 className="font-semibold text-sm">
+                          {category.label}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {category.count} holdings
+                        </p>
                       </div>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-primary">
                         {formatInvestmentValue(category.value, primaryCurrency)}
                       </span>
                       <Badge variant="secondary" className="text-xs">
-                        {((category.value / portfolioSummary.totalValue) * 100).toFixed(1)}%
+                        {(
+                          (category.value / portfolioSummary.totalValue) *
+                          100
+                        ).toFixed(1)}
+                        %
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">
@@ -298,19 +359,18 @@ export function InvestmentOverview({
       </motion.div>
 
       {/* Asset Allocation and Top Performers */}
-      <motion.div 
-        className="grid gap-4 md:grid-cols-2"
-        variants={itemVariants}
-      >
+      <motion.div className="grid gap-4 md:grid-cols-2" variants={itemVariants}>
         <Card>
           <CardHeader>
             <CardTitle>Asset Allocation</CardTitle>
-            <CardDescription>Portfolio distribution by asset type</CardDescription>
+            <CardDescription>
+              Portfolio distribution by asset type
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {assetAllocation.length > 0 ? (
               assetAllocation.map((asset, index) => (
-                <motion.div 
+                <motion.div
                   key={asset.type}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -323,7 +383,12 @@ export function InvestmentOverview({
                       {asset.type.replace('-', ' ')} ({asset.count})
                     </span>
                     <span className="font-medium">
-                      {formatInvestmentValue(asset.value, primaryCurrency, false)} ({asset.percentage}%)
+                      {formatInvestmentValue(
+                        asset.value,
+                        primaryCurrency,
+                        false
+                      )}{' '}
+                      ({asset.percentage}%)
                     </span>
                   </div>
                   <Progress value={asset.percentage} className="h-2" />
@@ -356,10 +421,17 @@ export function InvestmentOverview({
                     <div>
                       <div className="font-semibold">{performer.symbol}</div>
                       <div className="text-sm text-muted-foreground capitalize">
-                        {performer.type.replace('-', ' ')} • {formatInvestmentValue(performer.currentValue, primaryCurrency)}
+                        {performer.type.replace('-', ' ')} •{' '}
+                        {formatInvestmentValue(
+                          performer.currentValue,
+                          primaryCurrency
+                        )}
                       </div>
                     </div>
-                    <Badge variant="default" className="bg-green-100 text-green-800">
+                    <Badge
+                      variant="default"
+                      className="bg-green-100 text-green-800"
+                    >
                       +{performer.returnPercentage.toFixed(1)}%
                     </Badge>
                   </motion.div>
@@ -379,7 +451,9 @@ export function InvestmentOverview({
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Your latest investment transactions</CardDescription>
+            <CardDescription>
+              Your latest investment transactions
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -392,28 +466,32 @@ export function InvestmentOverview({
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <Badge variant="default">
-                      Added
-                    </Badge>
+                    <Badge variant="default">Added</Badge>
                     <div>
                       <div className="font-medium">{investment.symbol}</div>
                       <div className="text-sm text-muted-foreground">
-                        {investment.purchaseDate.toLocaleDateString()}
+                        {new Date(investment.purchaseDate).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium">{investment.quantity} shares</div>
+                    <div className="font-medium">
+                      {investment.quantity} shares
+                    </div>
                     <div className="text-sm text-muted-foreground">
-                      {formatInvestmentValue(investment.purchasePrice, investment.purchaseCurrency)}
+                      {formatInvestmentValue(
+                        investment.purchasePrice,
+                        investment.purchaseCurrency
+                      )}
                     </div>
                   </div>
                 </motion.div>
               ))}
-              
+
               {investments.length === 0 && (
                 <p className="text-muted-foreground text-center py-8">
-                  No investment activity yet. Add your first investment to get started.
+                  No investment activity yet. Add your first investment to get
+                  started.
                 </p>
               )}
             </div>
@@ -421,5 +499,5 @@ export function InvestmentOverview({
         </Card>
       </motion.div>
     </motion.div>
-  )
+  );
 }

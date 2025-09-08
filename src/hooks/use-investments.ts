@@ -4,6 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { Investment } from '@/types/financial'
 import { investmentCacheService } from '@/lib/firebase/investment-cache-service'
+import { 
+  loadUserInvestments,
+  addInvestment as addInvestmentToFirebase,
+  updateInvestment as updateInvestmentInFirebase,
+  deleteInvestment as deleteInvestmentFromFirebase,
+  updateMultipleInvestments,
+  migrateLocalStorageToFirebase
+} from '@/lib/firebase/investments-service'
 
 export interface UseInvestmentsReturn {
   investments: Investment[]
@@ -54,7 +62,7 @@ export function useInvestments(): UseInvestmentsReturn {
     }
   }, [user?.id])
 
-  // Load investments from localStorage (mock data for now)
+  // Load investments from Firebase with automatic localStorage migration
   const loadInvestments = useCallback(async () => {
     if (!user?.id) return
 
@@ -62,19 +70,27 @@ export function useInvestments(): UseInvestmentsReturn {
       setIsLoading(true)
       setError(null)
 
-      // For now, load from localStorage as mock data
-      // In a real implementation, this would load from Firebase
-      const stored = localStorage.getItem(`investments_${user.id}`)
-      const storedInvestments: Investment[] = stored ? JSON.parse(stored) : []
+      // First, try to migrate any existing localStorage data
+      const localStorageKey = `investments_${user.id}`
+      const migrationResult = await migrateLocalStorageToFirebase(user.id, localStorageKey)
+      
+      if (migrationResult.migratedCount > 0) {
+        console.log(`Migrated ${migrationResult.migratedCount} investments from localStorage to Firebase`)
+      }
+      
+      if (migrationResult.errors.length > 0) {
+        console.warn('Migration errors:', migrationResult.errors)
+      }
 
-      // Generate some mock data if none exists
-      if (storedInvestments.length === 0) {
-        const mockInvestments: Investment[] = [
+      // Load investments from Firebase
+      let firebaseInvestments = await loadUserInvestments(user.id)
+
+      // If no investments exist, create some mock data for new users
+      if (firebaseInvestments.length === 0) {
+        const mockInvestments = [
           {
-            id: '1',
-            userId: user.id,
             symbol: 'AAPL',
-            type: 'stock',
+            type: 'stock' as const,
             quantity: 10,
             purchasePrice: 150.00,
             purchaseCurrency: 'USD',
@@ -85,10 +101,8 @@ export function useInvestments(): UseInvestmentsReturn {
             currentValue: 1755.00
           },
           {
-            id: '2',
-            userId: user.id,
             symbol: 'MSFT',
-            type: 'stock',
+            type: 'stock' as const,
             quantity: 5,
             purchasePrice: 300.00,
             purchaseCurrency: 'USD',
@@ -99,10 +113,8 @@ export function useInvestments(): UseInvestmentsReturn {
             currentValue: 1726.00
           },
           {
-            id: '3',
-            userId: user.id,
             symbol: 'BTC',
-            type: 'crypto',
+            type: 'crypto' as const,
             quantity: 0.1,
             purchasePrice: 40000.00,
             purchaseCurrency: 'USD',
@@ -113,10 +125,8 @@ export function useInvestments(): UseInvestmentsReturn {
             currentValue: 4350.00
           },
           {
-            id: '4',
-            userId: user.id,
             symbol: 'VFIAX',
-            type: 'mutual-fund',
+            type: 'mutual-fund' as const,
             quantity: 50,
             purchasePrice: 320.00,
             purchaseCurrency: 'USD',
@@ -128,18 +138,23 @@ export function useInvestments(): UseInvestmentsReturn {
           }
         ]
         
-        localStorage.setItem(`investments_${user.id}`, JSON.stringify(mockInvestments))
-        setInvestments(mockInvestments)
-      } else {
-        setInvestments(storedInvestments)
+        // Add mock investments to Firebase
+        console.log('Creating mock investments for new user')
+        const promises = mockInvestments.map(investment => 
+          addInvestmentToFirebase(user.id, investment)
+        )
+        await Promise.all(promises)
+        
+        // Reload investments from Firebase to get the proper IDs
+        firebaseInvestments = await loadUserInvestments(user.id)
       }
 
-      // Update cache stats
-      await updateCacheStats(storedInvestments)
+      setInvestments(firebaseInvestments)
+      await updateCacheStats(firebaseInvestments)
       
     } catch (err) {
       console.error('Error loading investments:', err)
-      setError('Failed to load investments')
+      setError('Failed to load investments from database')
     } finally {
       setIsLoading(false)
     }
@@ -152,24 +167,34 @@ export function useInvestments(): UseInvestmentsReturn {
     if (!user?.id) throw new Error('User not authenticated')
 
     try {
-      const newInvestment: Investment = {
+      // Prepare investment data with initial values
+      const newInvestmentData = {
         ...investmentData,
-        id: Date.now().toString(),
-        userId: user.id,
         lastSyncedPrice: investmentData.purchasePrice, // Use purchase price initially
         lastSyncedPriceCurrency: investmentData.purchaseCurrency,
         lastSyncTimestamp: new Date(),
         currentValue: investmentData.quantity * investmentData.purchasePrice
       }
 
+      // Add to Firebase
+      const newInvestmentId = await addInvestmentToFirebase(user.id, newInvestmentData)
+      
+      // Create the full investment object with the new ID
+      const newInvestment: Investment = {
+        ...newInvestmentData,
+        id: newInvestmentId,
+        userId: user.id
+      }
+
+      // Update local state
       const updatedInvestments = [...investments, newInvestment]
       setInvestments(updatedInvestments)
-      localStorage.setItem(`investments_${user.id}`, JSON.stringify(updatedInvestments))
-      
       await updateCacheStats(updatedInvestments)
+      
+      console.log(`Successfully added investment ${investmentData.symbol} to Firebase`)
     } catch (err) {
       console.error('Error adding investment:', err)
-      throw new Error('Failed to add investment')
+      throw new Error('Failed to add investment to database')
     }
   }, [user?.id, investments, updateCacheStats])
 
@@ -178,17 +203,24 @@ export function useInvestments(): UseInvestmentsReturn {
     if (!user?.id) throw new Error('User not authenticated')
 
     try {
+      // Remove fields that shouldn't be updated directly
+      const { id: _, userId: __, ...updateData } = updates
+
+      // Update in Firebase
+      await updateInvestmentInFirebase(user.id, id, updateData)
+      
+      // Update local state
       const updatedInvestments = investments.map(inv => 
         inv.id === id ? { ...inv, ...updates } : inv
       )
       
       setInvestments(updatedInvestments)
-      localStorage.setItem(`investments_${user.id}`, JSON.stringify(updatedInvestments))
-      
       await updateCacheStats(updatedInvestments)
+      
+      console.log(`Successfully updated investment ${id} in Firebase`)
     } catch (err) {
       console.error('Error updating investment:', err)
-      throw new Error('Failed to update investment')
+      throw new Error('Failed to update investment in database')
     }
   }, [user?.id, investments, updateCacheStats])
 
@@ -197,18 +229,22 @@ export function useInvestments(): UseInvestmentsReturn {
     if (!user?.id) throw new Error('User not authenticated')
 
     try {
+      // Delete from Firebase
+      await deleteInvestmentFromFirebase(user.id, id)
+      
+      // Update local state
       const updatedInvestments = investments.filter(inv => inv.id !== id)
       setInvestments(updatedInvestments)
-      localStorage.setItem(`investments_${user.id}`, JSON.stringify(updatedInvestments))
-      
       await updateCacheStats(updatedInvestments)
+      
+      console.log(`Successfully deleted investment ${id} from Firebase`)
     } catch (err) {
       console.error('Error deleting investment:', err)
-      throw new Error('Failed to delete investment')
+      throw new Error('Failed to delete investment from database')
     }
   }, [user?.id, investments, updateCacheStats])
 
-  // Update prices using cache service
+  // Update prices using external API service and cache
   const updatePrices = useCallback(async () => {
     if (!user?.id || investments.length === 0) return
 
@@ -221,15 +257,17 @@ export function useInvestments(): UseInvestmentsReturn {
         crypto: investments.filter(inv => inv.type === 'crypto').map(inv => inv.symbol)
       }
 
-      // Request cache update
+      console.log(`Updating prices for ${portfolioSymbols.stocks.length} stocks and ${portfolioSymbols.crypto.length} crypto symbols`)
+
+      // Request cache update through external API service
       const result = await investmentCacheService.updatePortfolioCache(user.id, portfolioSymbols)
       
       if (result.success) {
-        // Get updated portfolio data
+        // Get updated portfolio data from cache
         const portfolioData = await investmentCacheService.getPortfolioData(user.id, portfolioSymbols)
         
         // Update investments with new prices
-        const updatedInvestments = investments.map(investment => {
+        const investmentUpdates = investments.map(investment => {
           let updatedPrice = investment.lastSyncedPrice
           let updatedValue = investment.currentValue
           
@@ -251,17 +289,43 @@ export function useInvestments(): UseInvestmentsReturn {
           }
         })
         
-        setInvestments(updatedInvestments)
-        localStorage.setItem(`investments_${user.id}`, JSON.stringify(updatedInvestments))
-        setLastPriceUpdate(new Date())
+        // Update Firebase with new prices (batch update)
+        const firebaseUpdates = investmentUpdates.map(inv => ({
+          id: inv.id,
+          data: {
+            lastSyncedPrice: inv.lastSyncedPrice,
+            lastSyncTimestamp: inv.lastSyncTimestamp,
+            currentValue: inv.currentValue
+          }
+        }))
         
-        await updateCacheStats(updatedInvestments)
+        await updateMultipleInvestments(user.id, firebaseUpdates)
+        
+        // Update local state
+        setInvestments(investmentUpdates)
+        setLastPriceUpdate(new Date())
+        await updateCacheStats(investmentUpdates)
+        
+        // Log success details
+        const successCount = result.updatedSymbols.length
+        const failureCount = result.failedSymbols.length
+        
+        if (successCount > 0) {
+          console.log(`Successfully updated ${successCount} symbols`)
+          if (failureCount > 0) {
+            console.warn(`Failed to update ${failureCount} symbols:`, result.failedSymbols)
+          }
+        } else {
+          console.warn('No symbols were updated')
+        }
       } else {
-        throw new Error('Failed to update prices: ' + result.errors.join(', '))
+        const errorMessage = result.errors.length > 0 ? result.errors.join(', ') : 'Unknown error'
+        throw new Error(`Failed to update prices: ${errorMessage}`)
       }
     } catch (err) {
       console.error('Error updating prices:', err)
-      setError('Failed to update prices')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update prices'
+      setError(errorMessage)
     }
   }, [user?.id, investments, updateCacheStats])
 

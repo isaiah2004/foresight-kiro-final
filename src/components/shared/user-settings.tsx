@@ -110,7 +110,7 @@ export function UserSettings() {
       <div className="text-center p-8">
         <p className="text-red-600 mb-4">Error: {error}</p>
         <p className="text-muted-foreground text-sm">
-          Make sure you have configured the Firebase integration in your Clerk Dashboard.
+          There was an issue loading your user settings. Please try refreshing the page.
         </p>
       </div>
     );

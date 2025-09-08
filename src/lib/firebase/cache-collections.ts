@@ -32,6 +32,10 @@ export interface PriceCache {
     changePercent?: number;
     volume?: number;
     marketCap?: number;
+    high?: number;
+    low?: number;
+    open?: number;
+    previousClose?: number;
   };
 }
 

@@ -215,49 +215,94 @@ export const requestCacheUpdate = async (
       status: 'processing'
     });
 
-    // For now, we'll simulate cache updates
-    // Real API integration will be implemented in task 7.3
-    const allSymbols = [...portfolioSymbols.stocks, ...portfolioSymbols.crypto];
-    
-    // Simulate successful cache updates
-    const mockUpdates = allSymbols.map(symbol => ({
-      symbol,
-      type: portfolioSymbols.stocks.includes(symbol) ? 'stock' as const : 'crypto' as const,
-      price: Math.random() * 1000 + 10, // Mock price
-      currency: 'USD',
-      source: 'finnhub' as const,
-      metadata: {
-        change: Math.random() * 20 - 10,
-        changePercent: Math.random() * 0.1 - 0.05,
-        volume: Math.floor(Math.random() * 1000000)
-      }
-    }));
+    // Import external API service dynamically to avoid circular dependencies
+    const { externalApiService } = await import('@/lib/api/external-api-service');
 
-    // Update cache with mock data
-    await updateCachePrices(mockUpdates);
+    // Fetch stock data from external APIs
+    if (portfolioSymbols.stocks.length > 0) {
+      try {
+        const stockResult = await externalApiService.fetchStockData(portfolioSymbols.stocks);
+        result.apiCalls += stockResult.apiCallsUsed;
+        
+        stockResult.data.forEach((_, symbol) => {
+          result.updatedSymbols.push(symbol);
+        });
+
+        stockResult.errors.forEach((error, symbol) => {
+          if (symbol !== 'finnhub' && symbol !== 'alphavantage' && symbol !== 'cache') {
+            result.failedSymbols.push(symbol);
+            result.errors.push(`${symbol}: ${error}`);
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching stock data:', error);
+        result.errors.push(`Stock data fetch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        result.failedSymbols.push(...portfolioSymbols.stocks);
+      }
+    }
+
+    // Fetch crypto data from external APIs
+    if (portfolioSymbols.crypto.length > 0) {
+      try {
+        const cryptoResult = await externalApiService.fetchCryptoData(portfolioSymbols.crypto);
+        result.apiCalls += cryptoResult.apiCallsUsed;
+        
+        cryptoResult.data.forEach((_, symbol) => {
+          result.updatedSymbols.push(symbol);
+        });
+
+        cryptoResult.errors.forEach((error, symbol) => {
+          if (symbol !== 'finnhub' && symbol !== 'alphavantage' && symbol !== 'cache') {
+            result.failedSymbols.push(symbol);
+            result.errors.push(`${symbol}: ${error}`);
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching crypto data:', error);
+        result.errors.push(`Crypto data fetch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        result.failedSymbols.push(...portfolioSymbols.crypto);
+      }
+    }
     
     // Update user's sync timestamp
     await updateUserSyncTimestamp(userId, portfolioSymbols);
 
     // Update request status
+    const allSymbols = [...portfolioSymbols.stocks, ...portfolioSymbols.crypto];
     await setDoc(requestDoc, {
       userId,
       symbols: allSymbols,
       requestedAt: serverTimestamp(),
       status: 'completed',
-      updatedSymbols: allSymbols,
+      updatedSymbols: result.updatedSymbols,
+      failedSymbols: result.failedSymbols,
+      apiCalls: result.apiCalls,
       completedAt: serverTimestamp()
     });
 
-    result.success = true;
-    result.updatedSymbols = allSymbols;
-    result.apiCalls = allSymbols.length;
+    result.success = result.updatedSymbols.length > 0;
 
     return result;
   } catch (error) {
     console.error('Error requesting cache update:', error);
     result.errors.push(error instanceof Error ? error.message : 'Unknown error');
     result.failedSymbols = [...portfolioSymbols.stocks, ...portfolioSymbols.crypto];
+    
+    // Update request status to failed
+    try {
+      const requestDoc = doc(getCacheRequestsCollection());
+      await setDoc(requestDoc, {
+        userId,
+        symbols: [...portfolioSymbols.stocks, ...portfolioSymbols.crypto],
+        requestedAt: serverTimestamp(),
+        status: 'failed',
+        error: result.errors.join(', '),
+        completedAt: serverTimestamp()
+      });
+    } catch (logError) {
+      console.error('Failed to log error status:', logError);
+    }
+    
     return result;
   }
 };

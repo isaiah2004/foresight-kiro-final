@@ -1,6 +1,8 @@
 "use client"
 
 import { DashboardLayout } from "@/components/shared/layouts/dashboard-layout"
+import { TabNavigation } from "@/components/shared/navigation/tab-navigation"
+import { tabNavigationConfig } from "@/lib/navigation-config"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -117,6 +119,8 @@ export default function LoansPage() {
 
   return (
     <DashboardLayout breadcrumbs={breadcrumbs} title="Loan Management">
+      <TabNavigation tabs={tabNavigationConfig.loans} />
+      
       <motion.div 
         className="flex flex-1 flex-col gap-6"
         variants={containerVariants}

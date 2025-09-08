@@ -3,12 +3,15 @@
 import { DashboardLayout } from "@/components/shared/layouts/dashboard-layout"
 import { TabNavigation } from "@/components/shared/navigation/tab-navigation"
 import { tabNavigationConfig } from "@/lib/navigation-config"
+import { useInvestments } from "@/hooks/use-investments"
+import { useCurrency } from "@/hooks/use-currency"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Home, MapPin, TrendingUp, DollarSign, Calendar, Plus, Building } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Home, MapPin, TrendingUp, DollarSign, Calendar, Plus, Building, AlertCircle } from "lucide-react"
+import { useMemo } from "react"
 
 export default function RealEstatePage() {
   const breadcrumbs = [
@@ -17,49 +20,67 @@ export default function RealEstatePage() {
     { title: "Real Estate" }
   ]
 
-  const realEstateData = {
-    totalValue: 485000,
-    totalInvested: 420000,
-    totalReturn: 15.5,
-    monthlyIncome: 3200,
-    occupancyRate: 95
+  const { 
+    investments, 
+    isLoading, 
+    error, 
+    addInvestment, 
+    updatePrices, 
+    lastPriceUpdate 
+  } = useInvestments()
+  
+  const { primaryCurrency } = useCurrency()
+
+  // Filter only real estate investments
+  const realEstateInvestments = useMemo(() => 
+    investments.filter(inv => inv.type === 'real-estate'), 
+    [investments]
+  )
+
+  const handleAddInvestment = async (data: any) => {
+    await addInvestment({
+      symbol: data.symbol,
+      type: data.type || 'real-estate',
+      quantity: data.quantity,
+      purchasePrice: data.purchasePrice,
+      purchaseCurrency: data.purchaseCurrency,
+      purchaseDate: data.purchaseDate,
+      metadata: {
+        propertyName: data.propertyName,
+        propertyType: data.propertyType,
+        location: data.location,
+        rentalIncome: data.rentalIncome,
+        tenant: data.tenant,
+        leaseEnd: data.leaseEnd,
+        notes: data.notes
+      }
+    })
   }
 
-  const properties = [
-    {
-      id: 1,
-      name: "Downtown Apartment",
-      type: "Residential",
-      location: "Downtown, NY",
-      purchasePrice: 180000,
-      currentValue: 220000,
-      monthlyRent: 1800,
-      occupancyStatus: "Occupied",
-      tenant: "John Smith",
-      leaseEnd: "2024-08-15",
-      roi: 22.2
-    },
-    {
-      id: 2,
-      name: "Suburban House",
-      type: "Residential",
-      location: "Suburbia, CA",
-      purchasePrice: 240000,
-      currentValue: 265000,
-      monthlyRent: 1400,
-      occupancyStatus: "Occupied", 
-      tenant: "Jane Doe",
-      leaseEnd: "2024-12-31",
-      roi: 10.4
-    }
-  ]
+  // Calculate totals from actual real estate investments
+  const totalValue = realEstateInvestments.reduce((sum, property) => {
+    const currentPrice = property.lastSyncedPrice || property.purchasePrice
+    return sum + (property.quantity * currentPrice)
+  }, 0)
+  
+  const totalInvested = realEstateInvestments.reduce((sum, property) => {
+    return sum + (property.quantity * property.purchasePrice)
+  }, 0)
+  
+  const totalReturn = totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested) * 100 : 0
+  
+  const monthlyIncome = realEstateInvestments.reduce((sum, property) => {
+    return sum + (property.metadata?.rentalIncome || 0)
+  }, 0)
 
-  const marketMetrics = [
-    { label: "Avg. Property Appreciation", value: "8.2%", trend: "up" },
-    { label: "Market Cap Rate", value: "5.8%", trend: "stable" },
-    { label: "Rental Yield", value: "7.9%", trend: "up" },
-    { label: "Vacancy Rate", value: "4.2%", trend: "down" }
-  ]
+  const realEstateData = {
+    totalValue,
+    totalInvested,
+    totalReturn,
+    monthlyIncome,
+    occupancyRate: realEstateInvestments.length > 0 ? 
+      (realEstateInvestments.filter(p => p.metadata?.tenant).length / realEstateInvestments.length) * 100 : 0
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -84,6 +105,13 @@ export default function RealEstatePage() {
   return (
     <DashboardLayout breadcrumbs={breadcrumbs} title="Real Estate Investments">
       <TabNavigation tabs={tabNavigationConfig.investments} />
+      
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       <motion.div 
         className="flex flex-1 flex-col gap-6"
@@ -128,7 +156,7 @@ export default function RealEstatePage() {
               <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">+{realEstateData.totalReturn}%</div>
+              <div className="text-2xl font-bold text-green-600">+{realEstateData.totalReturn.toFixed(1)}%</div>
               <p className="text-xs text-muted-foreground">
                 Appreciation + rental income
               </p>
@@ -154,7 +182,7 @@ export default function RealEstatePage() {
               <Home className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{realEstateData.occupancyRate}%</div>
+              <div className="text-2xl font-bold">{realEstateData.occupancyRate.toFixed(0)}%</div>
               <p className="text-xs text-muted-foreground">
                 Currently occupied
               </p>
@@ -169,146 +197,128 @@ export default function RealEstatePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Property Portfolio</CardTitle>
-                  <CardDescription>Your real estate investments</CardDescription>
+                  <CardDescription>
+                    {realEstateInvestments.length > 0 
+                      ? `Your real estate investments (${realEstateInvestments.length} properties)`
+                      : "No real estate investments found"
+                    }
+                  </CardDescription>
                 </div>
-                <Button>
+                <Button onClick={() => handleAddInvestment({})}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Property
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {properties.map((property, index) => (
-                  <motion.div
-                    key={property.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="grid gap-4 md:grid-cols-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Home className="h-4 w-4 text-primary" />
-                          <h3 className="font-semibold">{property.name}</h3>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-muted-foreground">Loading real estate investments...</div>
+                </div>
+              ) : realEstateInvestments.length === 0 ? (
+                <div className="text-center py-8">
+                  <Building className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Real Estate Investments</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Start building your real estate portfolio by adding your first property investment.
+                  </p>
+                  <Button onClick={() => handleAddInvestment({})}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Property
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {realEstateInvestments.map((property, index) => {
+                    const currentValue = property.quantity * (property.lastSyncedPrice || property.purchasePrice)
+                    const investedValue = property.quantity * property.purchasePrice
+                    const returnValue = currentValue - investedValue
+                    const returnPercentage = investedValue > 0 ? (returnValue / investedValue) * 100 : 0
+
+                    return (
+                      <motion.div
+                        key={property.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                        className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="grid gap-4 md:grid-cols-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Home className="h-4 w-4 text-primary" />
+                              <h3 className="font-semibold">{property.metadata?.propertyName || property.symbol}</h3>
+                            </div>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {property.metadata?.location || 'Location not specified'}
+                            </p>
+                            <Badge variant="secondary" className="mt-1">
+                              {property.metadata?.propertyType || 'Real Estate'}
+                            </Badge>
+                          </div>
+
+                          <div>
+                            <div className="text-sm text-muted-foreground">Purchase Price</div>
+                            <div className="font-semibold">{property.purchaseCurrency}{property.purchasePrice.toLocaleString()}</div>
+                            <div className="text-sm text-muted-foreground mt-1">Current Value</div>
+                            <div className="font-semibold text-green-600">${currentValue.toLocaleString()}</div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm text-muted-foreground">Monthly Rent</div>
+                            <div className="font-semibold">${(property.metadata?.rentalIncome || 0).toLocaleString()}</div>
+                            <div className="text-sm text-muted-foreground mt-1">ROI</div>
+                            <div className="font-semibold text-green-600">+{returnPercentage.toFixed(1)}%</div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm text-muted-foreground">Status</div>
+                            <Badge variant={property.metadata?.tenant ? 'default' : 'destructive'}>
+                              {property.metadata?.tenant ? 'Occupied' : 'Vacant'}
+                            </Badge>
+                            {property.metadata?.tenant && (
+                              <>
+                                <div className="text-sm text-muted-foreground mt-1">Tenant</div>
+                                <div className="text-sm font-medium">{property.metadata.tenant}</div>
+                                {property.metadata?.leaseEnd && (
+                                  <div className="text-xs text-muted-foreground">Lease ends: {property.metadata.leaseEnd}</div>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {property.location}
-                        </p>
-                        <Badge variant="secondary" className="mt-1">
-                          {property.type}
-                        </Badge>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-muted-foreground">Purchase Price</div>
-                        <div className="font-semibold">${property.purchasePrice.toLocaleString()}</div>
-                        <div className="text-sm text-muted-foreground mt-1">Current Value</div>
-                        <div className="font-semibold text-green-600">${property.currentValue.toLocaleString()}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-muted-foreground">Monthly Rent</div>
-                        <div className="font-semibold">${property.monthlyRent.toLocaleString()}</div>
-                        <div className="text-sm text-muted-foreground mt-1">ROI</div>
-                        <div className="font-semibold text-green-600">+{property.roi}%</div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm text-muted-foreground">Status</div>
-                        <Badge variant={property.occupancyStatus === 'Occupied' ? 'default' : 'destructive'}>
-                          {property.occupancyStatus}
-                        </Badge>
-                        {property.tenant && (
-                          <>
-                            <div className="text-sm text-muted-foreground mt-1">Tenant</div>
-                            <div className="text-sm font-medium">{property.tenant}</div>
-                            <div className="text-xs text-muted-foreground">Lease ends: {property.leaseEnd}</div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Market Metrics */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Market Metrics</CardTitle>
-              <CardDescription>Real estate market insights</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {marketMetrics.map((metric, index) => (
-                  <motion.div
-                    key={metric.label}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="p-4 border rounded-lg text-center"
-                  >
-                    <div className="text-2xl font-bold text-primary">{metric.value}</div>
-                    <div className="text-sm text-muted-foreground">{metric.label}</div>
-                    <Badge 
-                      variant={metric.trend === 'up' ? 'default' : metric.trend === 'down' ? 'destructive' : 'secondary'}
-                      className="mt-2"
-                    >
-                      {metric.trend === 'up' ? 'Trending Up' : metric.trend === 'down' ? 'Trending Down' : 'Stable'}
-                    </Badge>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Recent Activity */}
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Recent real estate transactions and updates</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {[
-                  { type: "Rent Received", property: "Downtown Apartment", amount: 1800, date: "2024-12-01" },
-                  { type: "Maintenance", property: "Suburban House", amount: -350, date: "2024-11-28" },
-                  { type: "Rent Received", property: "Suburban House", amount: 1400, date: "2024-12-01" },
-                  { type: "Property Tax", property: "Downtown Apartment", amount: -1200, date: "2024-11-15" }
-                ].map((activity, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge variant={activity.amount > 0 ? 'default' : 'destructive'}>
-                        {activity.type}
-                      </Badge>
-                      <div>
-                        <div className="font-medium">{activity.property}</div>
-                        <div className="text-sm text-muted-foreground">{activity.date}</div>
-                      </div>
-                    </div>
-                    <div className={`font-medium ${activity.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {activity.amount > 0 ? '+' : ''}${Math.abs(activity.amount)}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        {/* Update Prices Button */}
+        {realEstateInvestments.length > 0 && (
+          <motion.div variants={itemVariants}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Property Valuations</CardTitle>
+                <CardDescription>Keep your property valuations current</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={updatePrices} disabled={isLoading}>
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Update Property Values
+                </Button>
+                {lastPriceUpdate && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Last updated: {new Date(lastPriceUpdate).toLocaleString()}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </motion.div>
     </DashboardLayout>
   )

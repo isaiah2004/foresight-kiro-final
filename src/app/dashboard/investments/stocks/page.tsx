@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/shared/layouts/dashboard-layout"
 import { TabNavigation } from "@/components/shared/navigation/tab-navigation"
 import { tabNavigationConfig } from "@/lib/navigation-config"
 import { StocksDashboard } from "@/components/shared/investments/stocks-dashboard"
+import { StockInvestmentForm } from "@/components/shared/investments/stock-investment-form"
 import { useInvestments } from "@/hooks/use-investments"
 import { useCurrency } from "@/hooks/use-currency"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -37,11 +38,18 @@ export default function StocksPage() {
   const handleAddInvestment = async (data: any) => {
     await addInvestment({
       symbol: data.symbol,
-      type: 'stock', // Force stock type for this page
+      type: data.type || 'stock',
       quantity: data.quantity,
       purchasePrice: data.purchasePrice,
       purchaseCurrency: data.purchaseCurrency,
-      purchaseDate: data.purchaseDate
+      purchaseDate: data.purchaseDate,
+      metadata: {
+        companyName: data.companyName,
+        brokerageAccount: data.brokerageAccount,
+        orderType: data.orderType,
+        dividendYield: data.dividendYield,
+        notes: data.notes
+      }
     })
   }
 
