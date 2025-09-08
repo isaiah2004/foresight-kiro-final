@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useUserProfileClient } from '@/hooks/use-user-profile-client';
+import { useUserProfileContext } from '@/providers/user-profile-provider';
+import { getCurrencyOptions } from '@/lib/currency/data';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -19,19 +20,6 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-
-const CURRENCIES = [
-  { code: 'USD', name: 'US Dollar', symbol: '$' },
-  { code: 'EUR', name: 'Euro', symbol: '€' },
-  { code: 'GBP', name: 'British Pound', symbol: '£' },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
-  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF' },
-  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
-  { code: 'SEK', name: 'Swedish Krona', symbol: 'kr' },
-];
 
 const THEMES = [
   { value: 'light', label: 'Light' },
@@ -53,22 +41,11 @@ const LANGUAGES = [
 ];
 
 export function UserSettings() {
-  const { profile, loading, error, updateUserProfile } = useUserProfileClient();
+  const { profile, loading, error, updatePrimaryCurrency, updatePreferences } = useUserProfileContext();
   const [saving, setSaving] = useState(false);
 
-  const updatePrimaryCurrency = async (currency: string) => {
-    return await updateUserProfile({ primaryCurrency: currency });
-  };
-
-  const updatePreferences = async (preferences: Partial<{ theme: 'light' | 'dark' | 'system'; language: string }>) => {
-    if (!profile) return false;
-    return await updateUserProfile({
-      preferences: {
-        ...profile.preferences,
-        ...preferences,
-      },
-    });
-  };
+  // Get all currency options from JSON data
+  const currencyOptions = getCurrencyOptions();
 
   const handleCurrencyChange = async (currency: string) => {
     setSaving(true);
@@ -145,9 +122,9 @@ export function UserSettings() {
                 <SelectValue placeholder="Select currency" />
               </SelectTrigger>
               <SelectContent>
-                {CURRENCIES.map((currency) => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    {currency.symbol} {currency.name} ({currency.code})
+                {currencyOptions.map((currency) => (
+                  <SelectItem key={currency.value} value={currency.value}>
+                    {currency.symbol} {currency.label}
                   </SelectItem>
                 ))}
               </SelectContent>

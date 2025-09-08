@@ -10,21 +10,27 @@ export type {
 } from '@/types/currency';
 
 export {
-  SUPPORTED_CURRENCIES,
   FALLBACK_EXCHANGE_RATES,
 } from '@/types/currency';
 
-// Utilities
+// Data functions
 export {
+  getAllCurrencies,
   getCurrencyByCode,
   isSupportedCurrency,
+  getCurrencySymbol,
+  getCurrencyDisplayName,
+  getAllCurrencyCodes,
+  getCurrencyOptions,
+} from './data';
+
+// Utilities
+export {
   formatCurrency,
   parseCurrencyAmount,
   getFallbackExchangeRate,
   convertCurrencyFallback,
   isValidCurrencyCode,
-  getCurrencyDisplayName,
-  getCurrencySymbol,
   roundToCurrencyDecimals,
   createCurrencyError,
 } from './utils';

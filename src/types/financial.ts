@@ -134,6 +134,20 @@ export interface IncomeSource {
   metadata?: Record<string, any>;
 }
 
+export interface OneTimeIncome {
+  id: string;
+  userId: string;
+  type: 'bonus' | 'gift' | 'inheritance' | 'investment-maturity' | 'lottery' | 'refund' | 'side-gig' | 'other';
+  name: string;
+  description?: string;
+  amount: number;
+  currency: string;
+  date: Date;
+  source?: string; // Company, person, or entity that provided the income
+  isRecorded: boolean; // Whether this income has been recorded/received
+  metadata?: Record<string, any>;
+}
+
 export interface Expense {
   id: string;
   userId: string;

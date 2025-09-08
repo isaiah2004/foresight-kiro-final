@@ -17,7 +17,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { Currency, SUPPORTED_CURRENCIES } from '@/types/currency';
+import { Currency } from '@/types/currency';
+import { getAllCurrencies } from '@/lib/currency/data';
 import { getCurrencyDisplayName, getCurrencySymbol } from '@/lib/currency/utils';
 
 interface CurrencySelectorProps {
@@ -40,8 +41,9 @@ export function CurrencySelector({
   showFullName = false,
 }: CurrencySelectorProps) {
   const [open, setOpen] = useState(false);
+  const supportedCurrencies = getAllCurrencies();
 
-  const selectedCurrency = SUPPORTED_CURRENCIES.find(
+  const selectedCurrency = supportedCurrencies.find(
     (currency) => currency.code === value
   );
 
@@ -76,7 +78,7 @@ export function CurrencySelector({
           <CommandList>
             <CommandEmpty>No currency found.</CommandEmpty>
             <CommandGroup>
-              {SUPPORTED_CURRENCIES.map((currency) => (
+              {supportedCurrencies.map((currency) => (
                 <CommandItem
                   key={currency.code}
                   value={`${currency.code} ${currency.name}`}
