@@ -11,9 +11,10 @@ import {
 } from '@/lib/currency/exchange-rates';
 import { 
   formatCurrency, 
-  getCurrencyByCode
+  getCurrencyByCode,
+  getCurrencySymbol
 } from '@/lib/currency/utils';
-import { SUPPORTED_CURRENCIES } from '@/types/currency';
+import { getAllCurrencies } from '@/lib/currency/data';
 import { 
   CurrencyConversion, 
   CurrencyConversionError, 
@@ -48,6 +49,7 @@ interface UseCurrencyReturn {
   // Available currencies
   supportedCurrencies: Currency[];
   getCurrency: (code: string) => Currency | undefined;
+  getCurrencySymbol: (code: string) => string;
   
   // Cache management
   refreshRates: () => void;
@@ -180,8 +182,9 @@ export function useCurrency(): UseCurrencyReturn {
     convertAmount,
     getRate,
     updatePrimaryCurrency,
-    supportedCurrencies: SUPPORTED_CURRENCIES,
+    supportedCurrencies: getAllCurrencies(),
     getCurrency,
+    getCurrencySymbol,
     refreshRates,
     cacheStatus,
     isConverting,

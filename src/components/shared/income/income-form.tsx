@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
-import { CalendarIcon, Plus, X, DollarSign } from 'lucide-react'
+import { CalendarIcon, Plus, X, DollarSign, ArrowUpDown, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
@@ -18,9 +18,12 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Switch } from '@/components/ui/switch'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CurrencySelector } from '@/components/shared/currency/currency-selector'
+import { useCurrency } from '@/hooks/use-currency'
 import { IncomeSource } from '@/types/financial'
 import { IncomeFormData } from '@/hooks/use-income'
+import { CurrencyConversion, CurrencyConversionError } from '@/types/currency'
 
 const incomeSchema = z.object({
   type: z.enum(['salary', 'rental', 'other']),
@@ -67,6 +70,10 @@ export function IncomeForm({
   mode = 'create'
 }: IncomeFormProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [conversionPreview, setConversionPreview] = useState<CurrencyConversion | CurrencyConversionError | null>(null)
+  const [isConverting, setIsConverting] = useState(false)
+  
+  const { primaryCurrency, convertAmount, formatAmount } = useCurrency()
 
   const form = useForm<IncomeFormSchema>({
     resolver: zodResolver(incomeSchema),
@@ -74,13 +81,36 @@ export function IncomeForm({
       type: initialData?.type || 'salary',
       name: initialData?.name || '',
       amount: initialData?.amount || 0,
-      currency: initialData?.currency || 'USD',
+      currency: initialData?.currency || primaryCurrency,
       frequency: initialData?.frequency || 'monthly',
       isActive: initialData?.isActive ?? true,
       startDate: initialData?.startDate || new Date(),
       endDate: initialData?.endDate || undefined,
     }
   })
+
+  // Update currency conversion preview when amount or currency changes
+  const watchedAmount = form.watch('amount')
+  const watchedCurrency = form.watch('currency')
+  
+  useEffect(() => {
+    if (watchedAmount > 0 && watchedCurrency && watchedCurrency !== primaryCurrency) {
+      setIsConverting(true)
+      convertAmount(watchedAmount, watchedCurrency, primaryCurrency)
+        .then(result => {
+          setConversionPreview(result)
+        })
+        .catch(error => {
+          console.error('Error converting currency:', error)
+          setConversionPreview(null)
+        })
+        .finally(() => {
+          setIsConverting(false)
+        })
+    } else {
+      setConversionPreview(null)
+    }
+  }, [watchedAmount, watchedCurrency, primaryCurrency, convertAmount])
 
   const handleSubmit = async (data: IncomeFormSchema) => {
     try {
@@ -115,10 +145,34 @@ export function IncomeForm({
     }
   }
 
-  const monthlyEquivalent = calculateMonthlyEquivalent(
+  const originalMonthlyEquivalent = calculateMonthlyEquivalent(
     form.watch('amount') || 0, 
     form.watch('frequency')
   )
+
+  // Get converted amounts for display
+  const getConvertedAmounts = () => {
+    if (!conversionPreview || 'errorType' in conversionPreview) {
+      return {
+        convertedAmount: originalMonthlyEquivalent,
+        convertedCurrency: watchedCurrency || primaryCurrency,
+        hasConversion: false,
+        conversionError: conversionPreview && 'errorType' in conversionPreview ? conversionPreview.message : null
+      }
+    }
+
+    const convertedMonthly = calculateMonthlyEquivalent(conversionPreview.convertedAmount, form.watch('frequency'))
+    
+    return {
+      convertedAmount: convertedMonthly,
+      convertedCurrency: primaryCurrency,
+      hasConversion: true,
+      exchangeRate: conversionPreview.exchangeRate,
+      conversionError: null
+    }
+  }
+
+  const conversionInfo = getConvertedAmounts()
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -417,6 +471,9 @@ export function IncomeForm({
                   <CardTitle className="text-sm flex items-center gap-2">
                     <DollarSign className="h-4 w-4" />
                     Income Summary
+                    {isConverting && (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -424,7 +481,7 @@ export function IncomeForm({
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Payment Amount:</span>
                       <span className="font-medium">
-                        {form.watch('currency')} {(form.watch('amount') || 0).toFixed(2)}
+                        {formatAmount(form.watch('amount') || 0, form.watch('currency'))}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -434,15 +491,56 @@ export function IncomeForm({
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Monthly Equivalent:</span>
                       <span className="font-medium text-primary">
-                        {form.watch('currency')} {monthlyEquivalent.toFixed(2)}
+                        {formatAmount(originalMonthlyEquivalent, form.watch('currency'))}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Annual Equivalent:</span>
-                      <span className="font-medium">
-                        {form.watch('currency')} {(monthlyEquivalent * 12).toFixed(2)}
-                      </span>
-                    </div>
+                    
+                    {/* Currency Conversion Info */}
+                    {conversionInfo.hasConversion && (
+                      <>
+                        <div className="border-t pt-2">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                            <ArrowUpDown className="h-3 w-3" />
+                            <span>Converted to {primaryCurrency}</span>
+                            {conversionInfo.exchangeRate && (
+                              <span>(Rate: {conversionInfo.exchangeRate.toFixed(4)})</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Monthly ({primaryCurrency}):</span>
+                          <span className="font-medium text-green-600">
+                            {formatAmount(conversionInfo.convertedAmount, primaryCurrency)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Annual ({primaryCurrency}):</span>
+                          <span className="font-medium text-green-600">
+                            {formatAmount(conversionInfo.convertedAmount * 12, primaryCurrency)}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Original currency calculations if no conversion */}
+                    {!conversionInfo.hasConversion && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Annual Equivalent:</span>
+                        <span className="font-medium">
+                          {formatAmount(originalMonthlyEquivalent * 12, form.watch('currency'))}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Conversion Error */}
+                    {conversionInfo.conversionError && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertDescription className="text-xs">
+                          Currency conversion failed: {conversionInfo.conversionError}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Status:</span>
                       <span className={`font-medium ${form.watch('isActive') ? 'text-green-600' : 'text-gray-500'}`}>

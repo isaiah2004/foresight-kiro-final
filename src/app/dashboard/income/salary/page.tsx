@@ -18,23 +18,30 @@ export default function SalaryPage() {
 
   const { 
     incomeSources, 
+    convertedIncomeSources,
     isLoading, 
-    error, 
+    isConverting,
+    error,
+    incomeState,
     addIncomeSource, 
     updateIncomeSource, 
     deleteIncomeSource,
     calculateMonthlyEquivalent,
     totalMonthlyIncome,
-    totalAnnualIncome
+    totalAnnualIncome,
+    formatAmount
   } = useIncome()
   
-  const { primaryCurrency } = useCurrency()
+  const { primaryCurrency, getCurrencySymbol } = useCurrency()
+
+  // Only show error alert for actual errors, not empty states
+  const shouldShowError = error && !incomeState.isEmpty
 
   return (
     <DashboardLayout breadcrumbs={breadcrumbs} title="Salary Income">
       <TabNavigation tabs={tabNavigationConfig.income} />
       
-      {error && (
+      {shouldShowError && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
@@ -43,14 +50,19 @@ export default function SalaryPage() {
 
       <IncomeDashboard
         incomeSources={incomeSources}
+        convertedIncomeSources={convertedIncomeSources}
         totalMonthlyIncome={totalMonthlyIncome}
         totalAnnualIncome={totalAnnualIncome}
         primaryCurrency={primaryCurrency}
         isLoading={isLoading}
+        isConverting={isConverting}
+        incomeState={incomeState}
         onAddIncome={addIncomeSource}
         onUpdateIncome={updateIncomeSource}
         onDeleteIncome={deleteIncomeSource}
         calculateMonthlyEquivalent={calculateMonthlyEquivalent}
+        formatAmount={formatAmount}
+        getCurrencySymbol={getCurrencySymbol}
         filterByType="salary"
       />
     </DashboardLayout>

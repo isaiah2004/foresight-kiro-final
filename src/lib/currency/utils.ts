@@ -2,24 +2,30 @@
 
 import { 
   Currency, 
-  SUPPORTED_CURRENCIES, 
   FALLBACK_EXCHANGE_RATES,
   CurrencyConversion,
   CurrencyConversionError 
 } from '@/types/currency';
+import { 
+  getCurrencyByCode as getJsonCurrencyByCode,
+  isSupportedCurrency as isJsonSupportedCurrency,
+  getCurrencySymbol as getJsonCurrencySymbol,
+  getCurrencyDisplayName as getJsonCurrencyDisplayName,
+  getAllCurrencies
+} from './data';
 
 /**
  * Get currency information by code
  */
 export function getCurrencyByCode(code: string): Currency | undefined {
-  return SUPPORTED_CURRENCIES.find(currency => currency.code === code);
+  return getJsonCurrencyByCode(code);
 }
 
 /**
  * Check if a currency code is supported
  */
 export function isSupportedCurrency(code: string): boolean {
-  return SUPPORTED_CURRENCIES.some(currency => currency.code === code);
+  return isJsonSupportedCurrency(code);
 }
 
 /**
@@ -162,16 +168,14 @@ export function isValidCurrencyCode(code: string): boolean {
  * Get currency display name
  */
 export function getCurrencyDisplayName(code: string): string {
-  const currency = getCurrencyByCode(code);
-  return currency ? `${currency.name} (${currency.code})` : code;
+  return getJsonCurrencyDisplayName(code);
 }
 
 /**
  * Get currency symbol
  */
 export function getCurrencySymbol(code: string): string {
-  const currency = getCurrencyByCode(code);
-  return currency ? currency.symbol : code;
+  return getJsonCurrencySymbol(code);
 }
 
 /**

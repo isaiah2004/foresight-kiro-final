@@ -16,6 +16,12 @@ Welcome to the Foresight Financial Planning App documentation. This comprehensiv
 
 ## Quick Start
 
+### Recent Critical Fixes (September 8, 2025)
+- **Currency Symbol Display**: Fixed income dashboard to show primary currency symbols instead of hardcoded dollar signs
+- **Firebase Undefined Field Error**: Fixed income source submission errors with optional endDate fields
+- **Impact**: Users now see accurate currency representation (€, £, ¥, etc.) and can add income sources without errors
+- **Details**: See [income-primary-currency-symbols.md](./updates/income-primary-currency-symbols.md) and [firebase-undefined-field-fix.md](./updates/firebase-undefined-field-fix.md)
+
 1. **Installation**: Run `npm install` to install dependencies
 2. **Development**: Run `npm run dev` to start the development server
 3. **Building**: Run `npm run build` to create a production build
