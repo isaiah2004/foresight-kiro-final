@@ -131,6 +131,19 @@ export default function FundsOverviewPage() {
     { action: "Auto-save", fund: "401k Retirement", amount: 2400, date: "2024-11-01", type: "deposit" }
   ]
 
+  
+      const getGoalCategoryBarColor = (category: string) => {
+        switch (category) {
+          case 'Pots':
+            return 'bg-blue-500'
+          case 'Saving Funds':
+            return 'bg-red-500'
+          case 'Other':
+            return 'bg-purple-500'
+          default:
+            return 'bg-gray-100'
+        }
+      }
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -231,7 +244,7 @@ export default function FundsOverviewPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               whileHover={{ scale: 1.02 }}
-              className={`rounded-xl bg-gradient-to-br ${category.color} p-6 border ${category.borderColor} cursor-pointer`}
+              className="rounded-xl p-6 cursor-pointer"
               onClick={() => window.location.href = category.href}
             >
               <div className="flex items-center gap-3 mb-4">
@@ -302,6 +315,7 @@ export default function FundsOverviewPage() {
                             variant={goal.priority === 'High' ? 'destructive' : goal.priority === 'Medium' ? 'default' : 'secondary'}
                             className="text-xs"
                           >
+                        <div className={`h-8 mb-3 rounded-2xl ${getGoalCategoryBarColor(goal.category)}`} />
                             {goal.priority}
                           </Badge>
                           <Badge 

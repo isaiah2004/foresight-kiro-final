@@ -1,24 +1,41 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { 
-  calculateBudgetAllocation, 
-  validateBudgetPercentages, 
+import {
+  calculateBudgetAllocation,
+  validateBudgetPercentages,
   formatBudgetAmount,
   getCategoryColor,
-  DEFAULT_BUDGET_PERCENTAGES 
+  DEFAULT_BUDGET_PERCENTAGES,
 } from '@/lib/financial/budgets';
-import { BudgetCalculationInput, BudgetCalculationResult } from '@/types/budget';
+import {
+  BudgetCalculationInput,
+  BudgetCalculationResult,
+} from '@/types/budget';
 import { useCurrency } from '@/hooks/use-currency';
-import { Calculator, DollarSign, PieChart, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import {
+  Calculator,
+  DollarSign,
+  PieChart,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  Save,
+  RefreshCw,
+} from 'lucide-react';
 
 interface BudgetAllocationInterfaceProps {
   initialIncome?: number;
@@ -26,28 +43,44 @@ interface BudgetAllocationInterfaceProps {
   onAllocationChange?: (allocation: BudgetCalculationResult) => void;
 }
 
-export function BudgetAllocationInterface({ 
-  initialIncome = 0, 
-  initialTaxRate = 25,
-  onAllocationChange 
+export function BudgetAllocationInterface({
+  initialIncome = 0,
+  initialTaxRate = 0,
+  onAllocationChange,
 }: BudgetAllocationInterfaceProps) {
   const { primaryCurrency } = useCurrency();
-  const [grossIncome, setGrossIncome] = useState(initialIncome);
-  const [taxRate, setTaxRate] = useState(initialTaxRate);
+  const [netIncome, setNetIncome] = useState(initialIncome);
   const [percentages, setPercentages] = useState(DEFAULT_BUDGET_PERCENTAGES);
-  const [allocation, setAllocation] = useState<BudgetCalculationResult | null>(null);
+  const [tempPercentages, setTempPercentages] = useState(DEFAULT_BUDGET_PERCENTAGES);
+  const [allocation, setAllocation] = useState<BudgetCalculationResult | null>(
+    null
+  );
   const [errors, setErrors] = useState<string[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isDragging, setIsDragging] = useState<string | null>(null);
+
+  // Update netIncome when initialIncome changes (from real data)
+  useEffect(() => {
+    if (initialIncome > 0) {
+      setNetIncome(initialIncome);
+    }
+  }, [initialIncome]);
+
+  // Initialize tempPercentages from percentages
+  useEffect(() => {
+    setTempPercentages(percentages);
+  }, [percentages]);
 
   // Calculate allocation whenever inputs change
   useEffect(() => {
-    if (grossIncome > 0) {
+    if (netIncome > 0) {
       const validation = validateBudgetPercentages(percentages);
       setErrors(validation.errors);
 
       if (validation.isValid) {
         const input: BudgetCalculationInput = {
-          grossIncome,
-          taxRate,
+          grossIncome: netIncome, // Using net income as the base since tax is already applied
+          taxRate: 0, // No additional tax calculation needed
           currency: primaryCurrency,
           customPercentages: percentages,
         };
@@ -59,66 +92,43 @@ export function BudgetAllocationInterface({
         setAllocation(null);
       }
     }
-  }, [grossIncome, taxRate, percentages, primaryCurrency, onAllocationChange]);
+  }, [netIncome, percentages, primaryCurrency, onAllocationChange]);
 
-  const handlePercentageChange = (category: keyof typeof percentages, value: number) => {
-    setPercentages(prev => ({
+  const handlePercentageChange = (
+    category: keyof typeof percentages,
+    value: number
+  ) => {
+    setTempPercentages((prev) => ({
       ...prev,
       [category]: value,
     }));
+    setHasUnsavedChanges(true);
   };
+
+  const saveChanges = useCallback(() => {
+    setPercentages(tempPercentages);
+    setHasUnsavedChanges(false);
+  }, [tempPercentages]);
 
   const resetToDefaults = () => {
-    setPercentages(DEFAULT_BUDGET_PERCENTAGES);
+    setTempPercentages(DEFAULT_BUDGET_PERCENTAGES);
+    setHasUnsavedChanges(true);
   };
 
-  const totalAllocated = percentages.essentials + percentages.lifestyle + percentages.savingsFuture + percentages.sinkingFund;
+  const discardChanges = () => {
+    setTempPercentages(percentages);
+    setHasUnsavedChanges(false);
+  };
+
+  const totalAllocated =
+    tempPercentages.essentials +
+    tempPercentages.lifestyle +
+    tempPercentages.savingsFuture +
+    tempPercentages.sinkingFund;
   const remainingPercentage = 100 - totalAllocated;
 
   return (
     <div className="space-y-6">
-      {/* Income Input Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Income & Tax Information
-          </CardTitle>
-          <CardDescription>
-            Enter your gross monthly income and tax rate to calculate your budget allocation
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="gross-income">Gross Monthly Income</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="gross-income"
-                  type="number"
-                  placeholder="5000"
-                  value={grossIncome || ''}
-                  onChange={(e) => setGrossIncome(Number(e.target.value))}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tax-rate">Tax Rate (%)</Label>
-              <Input
-                id="tax-rate"
-                type="number"
-                placeholder="25"
-                value={taxRate}
-                onChange={(e) => setTaxRate(Number(e.target.value))}
-                min="0"
-                max="50"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Budget Allocation Section */}
       <Card>
@@ -132,106 +142,174 @@ export function BudgetAllocationInterface({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Allocation Controls */}
-          <div className="space-y-4">
-            {/* Essentials */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: getCategoryColor('essentials') }}
-                  />
-                  Essentials
-                </Label>
-                <Badge variant="outline">{percentages.essentials}%</Badge>
+          {/* Visual Budget Allocation */}
+          <div className="space-y-6">
+            {/* Visual Allocation Bar */}
+            <div className="space-y-4">
+              <h4 className="font-medium">Visual Budget Allocation</h4>
+              <div className="h-16 flex rounded-lg overflow-hidden border">
+                <div
+                  className="flex items-center justify-center text-white text-xs font-medium transition-all"
+                  style={{
+                    backgroundColor: getCategoryColor('essentials'),
+                    width: `${tempPercentages.essentials}%`,
+                  }}
+                >
+                  <span className="opacity-90">
+                    {tempPercentages.essentials > 10 ? `${tempPercentages.essentials}%` : ''}
+                  </span>
+                </div>
+                <div
+                  className="flex items-center justify-center text-white text-xs font-medium transition-all"
+                  style={{
+                    backgroundColor: getCategoryColor('lifestyle'),
+                    width: `${tempPercentages.lifestyle}%`,
+                  }}
+                >
+                  <span className="opacity-90">
+                    {tempPercentages.lifestyle > 8 ? `${tempPercentages.lifestyle}%` : ''}
+                  </span>
+                </div>
+                <div
+                  className="flex items-center justify-center text-white text-xs font-medium transition-all"
+                  style={{
+                    backgroundColor: getCategoryColor('savingsFuture'),
+                    width: `${tempPercentages.savingsFuture}%`,
+                  }}
+                >
+                  <span className="opacity-90">
+                    {tempPercentages.savingsFuture > 8 ? `${tempPercentages.savingsFuture}%` : ''}
+                  </span>
+                </div>
+                <div
+                  className="flex items-center justify-center text-white text-xs font-medium transition-all"
+                  style={{
+                    backgroundColor: getCategoryColor('sinkingFund'),
+                    width: `${tempPercentages.sinkingFund}%`,
+                  }}
+                >
+                  <span className="opacity-90">
+                    {tempPercentages.sinkingFund > 8 ? `${tempPercentages.sinkingFund}%` : ''}
+                  </span>
+                </div>
+                {remainingPercentage > 0 && (
+                  <div
+                    className="flex items-center justify-center bg-muted text-muted-foreground text-xs font-medium"
+                    style={{ width: `${remainingPercentage}%` }}
+                  >
+                    <span className="opacity-70">
+                      {remainingPercentage > 5 ? `${remainingPercentage}%` : ''}
+                    </span>
+                  </div>
+                )}
               </div>
-              <Slider
-                value={[percentages.essentials]}
-                onValueChange={([value]) => handlePercentageChange('essentials', value)}
-                max={80}
-                min={20}
-                step={5}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                Housing, groceries, transportation, insurance, debt repayment, medical
-              </p>
             </div>
 
-            {/* Lifestyle */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: getCategoryColor('lifestyle') }}
-                  />
-                  Lifestyle
-                </Label>
-                <Badge variant="outline">{percentages.lifestyle}%</Badge>
+            {/* Input Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Essentials */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getCategoryColor('essentials') }}
+                    />
+                    Essentials
+                  </Label>
+                  <Badge variant="outline">{tempPercentages.essentials}%</Badge>
+                </div>
+                <Input
+                  type="number"
+                  min="20"
+                  max="80"
+                  step="5"
+                  value={tempPercentages.essentials}
+                  onChange={(e) => handlePercentageChange('essentials', Number(e.target.value))}
+                  className="text-center"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Housing, groceries, transportation, insurance, debt repayment, medical
+                </p>
               </div>
-              <Slider
-                value={[percentages.lifestyle]}
-                onValueChange={([value]) => handlePercentageChange('lifestyle', value)}
-                max={40}
-                min={5}
-                step={5}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                Dining out, subscriptions, travel, personal fun money
-              </p>
-            </div>
 
-            {/* Savings & Future */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: getCategoryColor('savingsFuture') }}
-                  />
-                  Savings & Future
-                </Label>
-                <Badge variant="outline">{percentages.savingsFuture}%</Badge>
+              {/* Lifestyle */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getCategoryColor('lifestyle') }}
+                    />
+                    Lifestyle
+                  </Label>
+                  <Badge variant="outline">{tempPercentages.lifestyle}%</Badge>
+                </div>
+                <Input
+                  type="number"
+                  min="5"
+                  max="40"
+                  step="5"
+                  value={tempPercentages.lifestyle}
+                  onChange={(e) => handlePercentageChange('lifestyle', Number(e.target.value))}
+                  className="text-center"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dining out, subscriptions, travel, personal fun money
+                </p>
               </div>
-              <Slider
-                value={[percentages.savingsFuture]}
-                onValueChange={([value]) => handlePercentageChange('savingsFuture', value)}
-                max={50}
-                min={10}
-                step={5}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                Emergency fund, retirement/investments, general savings
-              </p>
-            </div>
 
-            {/* Sinking Fund */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: getCategoryColor('sinkingFund') }}
-                  />
-                  Sinking Fund
-                </Label>
-                <Badge variant="outline">{percentages.sinkingFund}%</Badge>
+              {/* Savings & Future */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getCategoryColor('savingsFuture') }}
+                    />
+                    Savings & Future
+                  </Label>
+                  <Badge variant="outline">{tempPercentages.savingsFuture}%</Badge>
+                </div>
+                <Input
+                  type="number"
+                  min="10"
+                  max="50"
+                  step="5"
+                  value={tempPercentages.savingsFuture}
+                  onChange={(e) => handlePercentageChange('savingsFuture', Number(e.target.value))}
+                  className="text-center"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Emergency fund, retirement/investments, general savings
+                </p>
               </div>
-              <Slider
-                value={[percentages.sinkingFund]}
-                onValueChange={([value]) => handlePercentageChange('sinkingFund', value)}
-                max={30}
-                min={5}
-                step={5}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                Electronics, clothing, home & furniture, gifts, annual expenses
-              </p>
+
+              {/* Sinking Fund */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getCategoryColor('sinkingFund') }}
+                    />
+                    Sinking Fund
+                  </Label>
+                  <Badge variant="outline">{tempPercentages.sinkingFund}%</Badge>
+                </div>
+                <Input
+                  type="number"
+                  min="5"
+                  max="30"
+                  step="5"
+                  value={tempPercentages.sinkingFund}
+                  onChange={(e) => handlePercentageChange('sinkingFund', Number(e.target.value))}
+                  className="text-center"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Electronics, clothing, home & furniture, gifts, annual expenses
+                </p>
+              </div>
             </div>
           </div>
 
@@ -241,23 +319,59 @@ export function BudgetAllocationInterface({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span>Total Allocated:</span>
-              <span className={totalAllocated > 100 ? 'text-red-500' : 'text-green-600'}>
+              <span
+                className={
+                  totalAllocated > 100 ? 'text-red-500' : 'text-green-600'
+                }
+              >
                 {totalAllocated}%
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span>Remaining:</span>
-              <span className={remainingPercentage < 0 ? 'text-red-500' : 'text-muted-foreground'}>
+              <span
+                className={
+                  remainingPercentage < 0
+                    ? 'text-red-500'
+                    : 'text-muted-foreground'
+                }
+              >
                 {remainingPercentage}%
               </span>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              onClick={saveChanges} 
+              disabled={!hasUnsavedChanges || totalAllocated > 100}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              Save Budget
+            </Button>
+            <Button 
+              onClick={discardChanges} 
+              variant="outline" 
+              disabled={!hasUnsavedChanges}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Discard Changes
+            </Button>
             <Button onClick={resetToDefaults} variant="outline" size="sm">
               Reset to Defaults
             </Button>
           </div>
+          
+          {hasUnsavedChanges && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                You have unsaved changes. Click &quot;Save Budget&quot; to apply your changes or &quot;Discard Changes&quot; to revert.
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -284,23 +398,20 @@ export function BudgetAllocationInterface({
               Budget Breakdown
             </CardTitle>
             <CardDescription>
-              Your monthly budget allocation based on {formatBudgetAmount(allocation.grossIncome, primaryCurrency)} gross income
+              Your monthly budget allocation based on{' '}
+              {formatBudgetAmount(allocation.netIncome, primaryCurrency)}{' '}
+              net income
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Income Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+            <div className="flex justify-center p-4 bg-muted/50 rounded-lg">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">Gross Income</p>
-                <p className="text-lg font-semibold">{formatBudgetAmount(allocation.grossIncome, primaryCurrency)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Tax Amount</p>
-                <p className="text-lg font-semibold text-red-600">-{formatBudgetAmount(allocation.taxAmount, primaryCurrency)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Net Income</p>
-                <p className="text-lg font-semibold text-green-600">{formatBudgetAmount(allocation.netIncome, primaryCurrency)}</p>
+                <p className="text-sm text-muted-foreground">Available for Allocation</p>
+                <p className="text-lg font-semibold text-green-600">
+                  {formatBudgetAmount(allocation.netIncome, primaryCurrency)}
+                </p>
+                <p className="text-xs text-muted-foreground">Net income (tax already applied)</p>
               </div>
             </div>
 
@@ -309,22 +420,32 @@ export function BudgetAllocationInterface({
             {/* Category Breakdown */}
             <div className="space-y-3">
               {Object.entries(allocation.categories).map(([category, data]) => (
-                <div key={category} className="flex items-center justify-between p-3 rounded-lg border">
+                <div
+                  key={category}
+                  className="flex items-center justify-between p-3 rounded-lg border"
+                >
                   <div className="flex items-center gap-3">
-                    <div 
-                      className="w-4 h-4 rounded-full" 
+                    <div
+                      className="w-4 h-4 rounded-full"
                       style={{ backgroundColor: getCategoryColor(category) }}
                     />
                     <div>
                       <p className="font-medium capitalize">
-                        {category === 'savingsFuture' ? 'Savings & Future' : 
-                         category === 'sinkingFund' ? 'Sinking Fund' : category}
+                        {category === 'savingsFuture'
+                          ? 'Savings & Future'
+                          : category === 'sinkingFund'
+                            ? 'Sinking Fund'
+                            : category}
                       </p>
-                      <p className="text-sm text-muted-foreground">{data.percentage.toFixed(1)}%</p>
+                      <p className="text-sm text-muted-foreground">
+                        {data.percentage.toFixed(1)}%
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">{formatBudgetAmount(data.amount, primaryCurrency)}</p>
+                    <p className="font-semibold">
+                      {formatBudgetAmount(data.amount, primaryCurrency)}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -335,8 +456,13 @@ export function BudgetAllocationInterface({
               <Alert>
                 <CheckCircle className="h-4 w-4" />
                 <AlertDescription>
-                  You have {formatBudgetAmount(allocation.categories.unallocated.amount, primaryCurrency)} unallocated. 
-                  This amount will be treated as savings to encourage good financial habits.
+                  You have{' '}
+                  {formatBudgetAmount(
+                    allocation.categories.unallocated.amount,
+                    primaryCurrency
+                  )}{' '}
+                  unallocated. This amount will be treated as savings to
+                  encourage good financial habits.
                 </AlertDescription>
               </Alert>
             )}

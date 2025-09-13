@@ -171,6 +171,24 @@ export default function OtherFundsPage() {
         return 'bg-gray-50 border-gray-200'
     }
   }
+    const getCategoryBarColor = (category: string) => {
+      switch (category) {
+        case 'life-events':
+          return 'bg-red-500'
+        case 'transportation':
+          return 'bg-blue-500'
+        case 'business':
+          return 'bg-blue-500'
+        case 'lifestyle':
+          return 'bg-green-500'
+        case 'hobbies':
+          return 'bg-purple-500'
+        case 'healthcare':
+          return 'bg-red-500'
+        default:
+          return 'bg-gray-100'
+      }
+    }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -298,7 +316,8 @@ export default function OtherFundsPage() {
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {funds.map((fund) => (
-                <Card key={fund.id} className={`hover:shadow-md transition-shadow ${getCategoryColor(fund.category)}`}>
+                <Card key={fund.id} className="hover:shadow-md transition-shadow overflow-hidden rounded-3xl">
+                  <div className={`h-8 m-3 rounded-2xl ${getCategoryBarColor(fund.category)}`} />
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">

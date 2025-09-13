@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { TrendingUp, TrendingDown, DollarSign, Calendar, Shield, Plus, AlertCircle } from "lucide-react"
 import { useMemo } from "react"
+import { formatInvestmentValue, formatPercentageChange } from "@/lib/financial/investments"
 
 export default function BondsPage() {
   const breadcrumbs = [
@@ -116,9 +117,9 @@ export default function BondsPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${totalValue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{formatInvestmentValue(totalValue, primaryCurrency)}</div>
               <p className="text-xs text-muted-foreground">
-                {totalValue > totalInvested ? '+' : ''}${(totalValue - totalInvested).toLocaleString()} from invested
+                {totalValue > totalInvested ? '+' : ''}{formatInvestmentValue(totalValue - totalInvested, primaryCurrency, false)} from invested
               </p>
             </CardContent>
           </Card>
@@ -134,7 +135,7 @@ export default function BondsPage() {
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${totalReturn >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
+                {formatPercentageChange(totalReturn).formatted}
               </div>
               <p className="text-xs text-muted-foreground">
                 Since inception
@@ -239,7 +240,7 @@ export default function BondsPage() {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
                               <p className="text-muted-foreground">Current Value</p>
-                              <p className="font-medium">${currentValue.toLocaleString()}</p>
+                              <p className="font-medium">{formatInvestmentValue(currentValue, primaryCurrency)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground">Quantity</p>
@@ -247,7 +248,7 @@ export default function BondsPage() {
                             </div>
                             <div>
                               <p className="text-muted-foreground">Purchase Price</p>
-                              <p className="font-medium">{bond.purchaseCurrency}{bond.purchasePrice.toLocaleString()}</p>
+                              <p className="font-medium">{formatInvestmentValue(bond.purchasePrice, bond.purchaseCurrency)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground">Purchase Date</p>
@@ -257,10 +258,10 @@ export default function BondsPage() {
                         </div>
                         <div className="text-right">
                           <div className={`text-lg font-semibold ${returnPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {returnPercentage >= 0 ? '+' : ''}{returnPercentage.toFixed(1)}%
+                            {formatPercentageChange(returnPercentage).formatted}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            ${returnValue >= 0 ? '+' : ''}{returnValue.toLocaleString()}
+                            {formatInvestmentValue(returnValue, primaryCurrency, false)}
                           </p>
                         </div>
                       </motion.div>

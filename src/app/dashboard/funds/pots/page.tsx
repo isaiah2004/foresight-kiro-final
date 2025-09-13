@@ -97,6 +97,21 @@ export default function PotsPage() {
     }
   }
 
+  const getGoalTypeBarColor = (goalType: string) => {
+    switch (goalType) {
+      case 'vacation':
+        return 'bg-blue-500'
+      case 'house-downpayment':
+        return 'bg-blue-500'
+      case 'laptop':
+        return 'bg-purple-500'
+      case 'other':
+        return 'bg-red-500'
+      default:
+        return 'bg-gray-100'
+    }
+  }
+
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -193,7 +208,8 @@ export default function PotsPage() {
             <h3 className="text-lg font-semibold">Active Pots</h3>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {activePots.map((pot) => (
-                <Card key={pot.id} className="hover:shadow-md transition-shadow">
+                <Card key={pot.id} className="hover:shadow-md transition-shadow overflow-hidden rounded-3xl">
+                  <div className={`h-8 m-3 rounded-2xl ${getGoalTypeBarColor(pot.goalType)}`} />
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -252,7 +268,8 @@ export default function PotsPage() {
             <h3 className="text-lg font-semibold text-green-700">Completed Pots</h3>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {completedPots.map((pot) => (
-                <Card key={pot.id} className="bg-green-50 border-green-200">
+                <Card key={pot.id} className="overflow-hidden rounded-3xl">
+                  <div className={`h-8 m-3 rounded-2xl ${getGoalTypeBarColor(pot.goalType)}`} />
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

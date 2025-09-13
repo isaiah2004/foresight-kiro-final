@@ -314,6 +314,7 @@ export function getFinnHubClient(): FinnHubClient {
   if (!finnHubClient) {
     const apiKey = process.env.FINNHUB_API_KEY;
     if (!apiKey) {
+      console.warn('FINNHUB_API_KEY environment variable is not set - API features will use fallback data');
       throw new Error('FINNHUB_API_KEY environment variable is not set');
     }
     finnHubClient = new FinnHubClient(apiKey);

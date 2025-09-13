@@ -1,31 +1,31 @@
-"use client"
+'use client';
 
-import { DashboardLayout } from "@/components/shared/layouts/dashboard-layout"
-import { TabNavigation } from "@/components/shared/navigation/tab-navigation"
-import { tabNavigationConfig } from "@/lib/navigation-config"
-import { InvestmentOverview } from "@/components/shared/investments/investment-overview"
-import { useInvestments } from "@/hooks/use-investments"
-import { useCurrency } from "@/hooks/use-currency"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { DashboardLayout } from '@/components/shared/layouts/dashboard-layout';
+import { TabNavigation } from '@/components/shared/navigation/tab-navigation';
+import { tabNavigationConfig } from '@/lib/navigation-config';
+import { InvestmentOverview } from '@/components/shared/investments/investment-overview';
+import { useInvestments } from '@/hooks/use-investments';
+import { useCurrency } from '@/hooks/use-currency';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function InvestmentOverviewPage() {
   const breadcrumbs = [
-    { title: "Dashboard", href: "/dashboard" },
-    { title: "Investments", href: "/dashboard/investments" },
-    { title: "Overview" }
-  ]
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Investments', href: '/dashboard/investments' },
+    { title: 'Overview' },
+  ];
 
-  const { 
-    investments, 
-    isLoading, 
-    error, 
-    addInvestment, 
-    updatePrices, 
-    lastPriceUpdate 
-  } = useInvestments()
-  
-  const { primaryCurrency } = useCurrency()
+  const {
+    investments,
+    isLoading,
+    error,
+    addInvestment,
+    updatePrices,
+    lastPriceUpdate,
+  } = useInvestments();
+
+  const { primaryCurrency } = useCurrency();
 
   const handleAddInvestment = async (data: any) => {
     await addInvestment({
@@ -34,14 +34,17 @@ export default function InvestmentOverviewPage() {
       quantity: data.quantity,
       purchasePrice: data.purchasePrice,
       purchaseCurrency: data.purchaseCurrency,
-      purchaseDate: data.purchaseDate
-    })
-  }
+      purchaseDate: data.purchaseDate,
+    });
+  };
 
   return (
-    <DashboardLayout breadcrumbs={breadcrumbs} title="Investment Portfolio Overview">
+    <DashboardLayout
+      breadcrumbs={breadcrumbs}
+      title="Investment Portfolio Overview"
+    >
       <TabNavigation tabs={tabNavigationConfig.investments} />
-      
+
       {error && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
@@ -58,5 +61,5 @@ export default function InvestmentOverviewPage() {
         lastPriceUpdate={lastPriceUpdate || undefined}
       />
     </DashboardLayout>
-  )
+  );
 }
