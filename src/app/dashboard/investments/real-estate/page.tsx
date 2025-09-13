@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Home, MapPin, TrendingUp, DollarSign, Calendar, Plus, Building, AlertCircle } from "lucide-react"
 import { useMemo } from "react"
+import { formatInvestmentValue, formatPercentageChange } from "@/lib/financial/investments"
 
 export default function RealEstatePage() {
   const breadcrumbs = [
@@ -130,7 +131,7 @@ export default function RealEstatePage() {
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${realEstateData.totalValue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{formatInvestmentValue(realEstateData.totalValue, primaryCurrency)}</div>
               <p className="text-xs text-muted-foreground">
                 Current market value
               </p>
@@ -143,7 +144,7 @@ export default function RealEstatePage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${realEstateData.totalInvested.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{formatInvestmentValue(realEstateData.totalInvested, primaryCurrency)}</div>
               <p className="text-xs text-muted-foreground">
                 Purchase price + improvements
               </p>
@@ -156,7 +157,7 @@ export default function RealEstatePage() {
               <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">+{realEstateData.totalReturn.toFixed(1)}%</div>
+              <div className="text-2xl font-bold text-green-600">{formatPercentageChange(realEstateData.totalReturn).formatted}</div>
               <p className="text-xs text-muted-foreground">
                 Appreciation + rental income
               </p>
@@ -169,7 +170,7 @@ export default function RealEstatePage() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${realEstateData.monthlyIncome.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{formatInvestmentValue(realEstateData.monthlyIncome, primaryCurrency)}</div>
               <p className="text-xs text-muted-foreground">
                 Rental income
               </p>
@@ -260,16 +261,16 @@ export default function RealEstatePage() {
 
                           <div>
                             <div className="text-sm text-muted-foreground">Purchase Price</div>
-                            <div className="font-semibold">{property.purchaseCurrency}{property.purchasePrice.toLocaleString()}</div>
+                            <div className="font-semibold">{formatInvestmentValue(property.purchasePrice, property.purchaseCurrency)}</div>
                             <div className="text-sm text-muted-foreground mt-1">Current Value</div>
-                            <div className="font-semibold text-green-600">${currentValue.toLocaleString()}</div>
+                            <div className="font-semibold text-green-600">{formatInvestmentValue(currentValue, primaryCurrency)}</div>
                           </div>
 
                           <div>
                             <div className="text-sm text-muted-foreground">Monthly Rent</div>
-                            <div className="font-semibold">${(property.metadata?.rentalIncome || 0).toLocaleString()}</div>
+                            <div className="font-semibold">{formatInvestmentValue(property.metadata?.rentalIncome || 0, primaryCurrency)}</div>
                             <div className="text-sm text-muted-foreground mt-1">ROI</div>
-                            <div className="font-semibold text-green-600">+{returnPercentage.toFixed(1)}%</div>
+                            <div className="font-semibold text-green-600">{formatPercentageChange(returnPercentage).formatted}</div>
                           </div>
 
                           <div>

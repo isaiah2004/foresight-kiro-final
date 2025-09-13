@@ -27,6 +27,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useMemo } from 'react';
+import { formatInvestmentValue, formatPercentageChange } from '@/lib/financial/investments';
 
 export default function MutualFundsPage() {
   const breadcrumbs = [
@@ -145,11 +146,11 @@ export default function MutualFundsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${totalValue.toLocaleString()}
+                {formatInvestmentValue(totalValue, primaryCurrency)}
               </div>
               <p className="text-xs text-muted-foreground">
-                {totalValue > totalInvested ? '+' : ''}$
-                {(totalValue - totalInvested).toLocaleString()} from invested
+                {totalValue > totalInvested ? '+' : ''}
+                {formatInvestmentValue(totalValue - totalInvested, primaryCurrency, false)} from invested
               </p>
             </CardContent>
           </Card>
@@ -169,8 +170,7 @@ export default function MutualFundsPage() {
               <div
                 className={`text-2xl font-bold ${totalReturn >= 0 ? 'text-green-600' : 'text-red-600'}`}
               >
-                {totalReturn >= 0 ? '+' : ''}
-                {totalReturn.toFixed(2)}%
+                {formatPercentageChange(totalReturn).formatted}
               </div>
               <p className="text-xs text-muted-foreground">Since inception</p>
             </CardContent>
@@ -301,7 +301,7 @@ export default function MutualFundsPage() {
                                 Current Value
                               </p>
                               <p className="font-medium">
-                                ${currentValue.toLocaleString()}
+                                {formatInvestmentValue(currentValue, primaryCurrency)}
                               </p>
                             </div>
                             <div>
@@ -353,8 +353,7 @@ export default function MutualFundsPage() {
                           <div
                             className={`text-lg font-semibold ${returnPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}
                           >
-                            ${returnValue >= 0 ? '+' : ''}
-                            {returnValue.toLocaleString()}
+                            {formatInvestmentValue(returnValue, primaryCurrency, false)}
                           </div>
                           <p className="text-sm text-muted-foreground">P&L</p>
                         </div>

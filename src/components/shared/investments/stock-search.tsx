@@ -19,13 +19,33 @@ interface StockSearchResult {
   change?: number
   changePercent?: number
   lastUpdated?: Date
-  source?: 'cache' | 'api'
+  source?: 'cache' | 'api' | 'demo'
 }
 
 interface StockSearchProps {
   onSelect: (stock: StockSearchResult) => void
   selectedSymbol?: string
   searchType?: 'stock' | 'crypto'
+}
+
+// Mock crypto prices for fallback when API fails
+const getMockCryptoPrice = (symbol: string) => {
+  const mockPrices: Record<string, { price: number; change: number; changePercent: number }> = {
+    'BTC': { price: 43250.00, change: 1250.50, changePercent: 2.98 },
+    'ETH': { price: 2675.30, change: -45.20, changePercent: -1.66 },
+    'ADA': { price: 0.485, change: 0.012, changePercent: 2.54 },
+    'DOT': { price: 7.82, change: -0.15, changePercent: -1.88 },
+    'SOL': { price: 98.75, change: 3.25, changePercent: 3.40 },
+    'AVAX': { price: 24.15, change: 0.85, changePercent: 3.65 },
+    'MATIC': { price: 0.92, change: -0.03, changePercent: -3.15 },
+    'LINK': { price: 14.85, change: 0.45, changePercent: 3.13 },
+    'UNI': { price: 6.72, change: -0.08, changePercent: -1.17 },
+    'LTC': { price: 73.50, change: 1.20, changePercent: 1.66 },
+    'BCH': { price: 245.80, change: -2.30, changePercent: -0.93 },
+    'XRP': { price: 0.615, change: 0.015, changePercent: 2.50 }
+  }
+  
+  return mockPrices[symbol] || { price: 100.00, change: 0, changePercent: 0 }
 }
 
 export function StockSearch({ onSelect, selectedSymbol, searchType = 'stock' }: StockSearchProps) {
@@ -170,10 +190,28 @@ export function StockSearch({ onSelect, selectedSymbol, searchType = 'stock' }: 
               lastUpdated: new Date(),
               source: 'api' as const
             }))
+          } else {
+            // If API fails, provide fallback mock prices for demonstration
+            if (searchType === 'crypto') {
+              results = results.map(result => ({
+                ...result,
+                ...getMockCryptoPrice(result.symbol),
+                lastUpdated: new Date(),
+                source: 'demo' as const
+              }))
+            }
           }
         } catch (error) {
           console.warn('Failed to fetch current prices:', error)
-          // Continue with results without prices
+          // Provide fallback mock prices for crypto when API fails
+          if (searchType === 'crypto') {
+            results = results.map(result => ({
+              ...result,
+              ...getMockCryptoPrice(result.symbol),
+              lastUpdated: new Date(),
+              source: 'demo' as const
+            }))
+          }
         }
       }
 
@@ -278,6 +316,16 @@ export function StockSearch({ onSelect, selectedSymbol, searchType = 'stock' }: 
         </Alert>
       )}
 
+      {/* Demo Data Warning */}
+      {searchResults.some(result => result.source === 'demo') && (
+        <Alert className="border-orange-200 bg-orange-50">
+          <AlertCircle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            Using demo price data - External API unavailable. Prices shown are for demonstration purposes only.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {lastSearchTime && (
         <div className="text-xs text-muted-foreground">
           Prices last updated: {lastSearchTime.toLocaleTimeString()}
@@ -319,6 +367,11 @@ export function StockSearch({ onSelect, selectedSymbol, searchType = 'stock' }: 
                           {stock.source === 'cache' && (
                             <Badge variant="secondary" className="text-xs">
                               Cached
+                            </Badge>
+                          )}
+                          {stock.source === 'demo' && (
+                            <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                              Demo Data
                             </Badge>
                           )}
                           {isSelected && (

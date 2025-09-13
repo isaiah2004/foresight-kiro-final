@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
 import { CalendarIcon, Plus, DollarSign, ArrowUpDown, Loader2, Gift, Award, Banknote } from 'lucide-react'
+
 import { format } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
@@ -424,7 +425,7 @@ export function OneTimeIncomeForm({
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <selectedTypeIcon className="h-4 w-4" />
+                    {React.createElement(selectedTypeIcon, { className: "h-4 w-4" })}
                     Income Summary
                     {isConverting && (
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Package, TrendingUp, DollarSign, Star, Plus, Briefcase, Gem, Palette, AlertCircle } from "lucide-react"
 import { useMemo } from "react"
+import { formatInvestmentValue, formatPercentageChange } from "@/lib/financial/investments"
 
 export default function OtherInvestmentsPage() {
   const breadcrumbs = [
@@ -169,7 +170,7 @@ export default function OtherInvestmentsPage() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${otherInvestmentsData.totalValue.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{formatInvestmentValue(otherInvestmentsData.totalValue, primaryCurrency)}</div>
               <p className="text-xs text-muted-foreground">
                 Alternative investments
               </p>
@@ -182,7 +183,7 @@ export default function OtherInvestmentsPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${otherInvestmentsData.totalInvested.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{formatInvestmentValue(otherInvestmentsData.totalInvested, primaryCurrency)}</div>
               <p className="text-xs text-muted-foreground">
                 Capital deployed
               </p>
@@ -195,7 +196,7 @@ export default function OtherInvestmentsPage() {
               <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">+{otherInvestmentsData.totalReturn.toFixed(1)}%</div>
+              <div className="text-2xl font-bold text-green-600">{formatPercentageChange(otherInvestmentsData.totalReturn).formatted}</div>
               <p className="text-xs text-muted-foreground">
                 Portfolio performance
               </p>
@@ -296,18 +297,18 @@ export default function OtherInvestmentsPage() {
 
                           <div>
                             <div className="text-sm text-muted-foreground">Invested</div>
-                            <div className="font-semibold">${investedValue.toLocaleString()}</div>
+                            <div className="font-semibold">{formatInvestmentValue(investedValue, primaryCurrency)}</div>
                           </div>
 
                           <div>
                             <div className="text-sm text-muted-foreground">Current Value</div>
-                            <div className="font-semibold">${currentValue.toLocaleString()}</div>
+                            <div className="font-semibold">{formatInvestmentValue(currentValue, primaryCurrency)}</div>
                           </div>
 
                           <div>
                             <div className="text-sm text-muted-foreground">Return</div>
                             <Badge variant="default" className="bg-green-100 text-green-800">
-                              +{returnPercentage.toFixed(1)}%
+                              {formatPercentageChange(returnPercentage).formatted}
                             </Badge>
                           </div>
 
