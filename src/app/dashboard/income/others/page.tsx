@@ -26,9 +26,13 @@ export default function OthersPage() {
     addIncomeSource, 
     updateIncomeSource, 
     deleteIncomeSource,
+    addOneTimeIncome,
+    updateOneTimeIncome,
+    deleteOneTimeIncome,
     calculateMonthlyEquivalent,
     totalMonthlyIncome,
     totalAnnualIncome,
+    totalOneTimeIncomeThisYear,
     formatAmount
   } = useIncome()
   
@@ -53,6 +57,7 @@ export default function OthersPage() {
         convertedIncomeSources={convertedIncomeSources}
         totalMonthlyIncome={totalMonthlyIncome}
         totalAnnualIncome={totalAnnualIncome}
+        totalOneTimeIncomeThisYear={totalOneTimeIncomeThisYear}
         primaryCurrency={primaryCurrency}
         isLoading={isLoading}
         isConverting={isConverting}
@@ -60,6 +65,9 @@ export default function OthersPage() {
         onAddIncome={addIncomeSource}
         onUpdateIncome={updateIncomeSource}
         onDeleteIncome={deleteIncomeSource}
+        onAddOneTimeIncome={addOneTimeIncome}
+        onUpdateOneTimeIncome={updateOneTimeIncome}
+        onDeleteOneTimeIncome={deleteOneTimeIncome}
         calculateMonthlyEquivalent={calculateMonthlyEquivalent}
         formatAmount={formatAmount}
         getCurrencySymbol={getCurrencySymbol}
